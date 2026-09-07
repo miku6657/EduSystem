@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.keshe.edumanage.filter.ShiroUserFilter;
+import com.keshe.edumanage.filter.AuthFilter;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
@@ -18,21 +18,19 @@ public class ShiroConfig {
 
     @Bean
     ShiroFilterFactoryBean shiroFilterFactoryBean() {
-        System.out.println("shiroFilterFactoryBean run");
         ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
 
         Map<String, Filter> filter = new HashMap<>();
-        filter.put("user", new ShiroUserFilter());
+        filter.put("user", new AuthFilter());
         bean.setFilters(filter);
 
         bean.setSecurityManager(securityManager());
         bean.setLoginUrl("/unauthorized/noLogin");
         bean.setUnauthorizedUrl("/unauthorized/noPerm");
+
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("/login/**", "anon");
-        map.put("/pwd/resetPwd", "anon");
-        map.put("/phone/sendCode", "anon");
-        map.put("/**", "user");
+        // TODO: 在此配置各 URL 的访问权限(anon / user / 角色等)
+        map.put("/**", "anon");
         bean.setFilterChainDefinitionMap(map);
         return bean;
     }
@@ -40,19 +38,14 @@ public class ShiroConfig {
     @Bean
     DefaultWebSecurityManager securityManager() {
         DefaultWebSecurityManager manager = new DefaultWebSecurityManager();
-        manager.setRealm(myRealm());
+        // TODO: 注入自定义 Realm(实现 doGetAuthenticationInfo / doGetAuthorizationInfo)
+        // manager.setRealm(myRealm());
         return manager;
-    }
-
-    @Bean
-    MyRealm myRealm() {
-        return new MyRealm();
     }
 
     /**
      * 下面的代码是添加注解支持
      */
-
     @Bean
     public AuthorizationAttributeSourceAdvisor authorizationAttributeSourceAdvisor(DefaultWebSecurityManager securityManager) {
         AuthorizationAttributeSourceAdvisor advisor = new AuthorizationAttributeSourceAdvisor();

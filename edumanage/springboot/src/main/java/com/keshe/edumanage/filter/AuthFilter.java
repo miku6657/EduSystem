@@ -1,6 +1,5 @@
 package com.keshe.edumanage.filter;
 
-import com.alibaba.fastjson.JSONObject;
 import org.apache.shiro.web.filter.authc.UserFilter;
 import org.apache.shiro.web.util.WebUtils;
 import org.springframework.http.HttpStatus;
@@ -13,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * @author Tears
  */
-public class ShiroUserFilter extends UserFilter {
+public class AuthFilter extends UserFilter {
     @Override
     protected boolean preHandle(ServletRequest request, ServletResponse response) throws Exception {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
