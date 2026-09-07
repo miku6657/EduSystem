@@ -1,8 +1,8 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
-import com.qifangli.edumanage.util.LoggerUtil;
-import com.qifangli.edumanage.util.result.ResultUtils;
-import com.qifangli.edumanage.util.result.Result;
+import com.keshe.edumanage.util.LoggerUtil;
+import com.keshe.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.util.result.Result;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.util;
+package com.keshe.edumanage.util;
 
 import org.slf4j.LoggerFactory;
 

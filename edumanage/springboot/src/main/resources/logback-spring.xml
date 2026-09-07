@@ -54,7 +54,7 @@
     </appender>
 
     <!--连接数据库配置-->
-    <appender name="db_classic_mysql_pool" class="com.qifangli.edumanage.config.LogDBAppender">
+    <appender name="db_classic_mysql_pool" class="com.keshe.edumanage.config.LogDBAppender">
         <connectionSource class="ch.qos.logback.core.db.DataSourceConnectionSource">
             <dataSource class="org.apache.commons.dbcp.BasicDataSource">
                 <driverClassName>com.mysql.cj.jdbc.Driver</driverClassName>

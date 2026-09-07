@@ -1,4 +1,4 @@
-package com.qifangli.edumanage;
+package com.keshe.edumanage;
 
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.support.config.FastJsonConfig;
@@ -12,7 +12,7 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
-@MapperScan("com.qifangli.edumanage.dao.mapper")
+@MapperScan("com.keshe.edumanage.dao.mapper")
 @ServletComponentScan
 public class EdumanageApplication extends SpringBootServletInitializer {
 

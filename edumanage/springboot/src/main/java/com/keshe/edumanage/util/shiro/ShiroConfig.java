@@ -1,10 +1,10 @@
-package com.qifangli.edumanage.util.shiro;
+package com.keshe.edumanage.util.shiro;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.qifangli.edumanage.filter.ShiroUserFilter;
+import com.keshe.edumanage.filter.ShiroUserFilter;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;

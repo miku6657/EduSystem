@@ -1,20 +1,18 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qifangli.edumanage.dao.entity.Student;
-import com.qifangli.edumanage.service.ClassAndGradeService;
-import com.qifangli.edumanage.util.ExcelUtils;
-import com.qifangli.edumanage.util.JWTUtil;
-import com.qifangli.edumanage.util.LoggerUtil;
-import com.qifangli.edumanage.util.result.Result;
-import com.qifangli.edumanage.util.result.ResultUtils;
-import com.qifangli.edumanage.service.StudentService;
+import com.keshe.edumanage.dao.entity.Student;
+import com.keshe.edumanage.service.ClassAndGradeService;
+import com.keshe.edumanage.util.ExcelUtils;
+import com.keshe.edumanage.util.LoggerUtil;
+import com.keshe.edumanage.util.result.Result;
+import com.keshe.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.service.StudentService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;

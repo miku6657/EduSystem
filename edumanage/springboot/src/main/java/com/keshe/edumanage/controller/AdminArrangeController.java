@@ -1,17 +1,16 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qifangli.edumanage.dao.entity.CourseArrange;
-import com.qifangli.edumanage.dao.entity.Term;
-import com.qifangli.edumanage.util.ExcelUtils;
-import com.qifangli.edumanage.util.JWTUtil;
-import com.qifangli.edumanage.util.LoggerUtil;
-import com.qifangli.edumanage.util.result.Result;
-import com.qifangli.edumanage.util.result.ResultUtils;
-import com.qifangli.edumanage.service.CourseArrangeService;
-import com.qifangli.edumanage.service.RolePermissionService;
-import com.qifangli.edumanage.service.SpotService;
-import com.qifangli.edumanage.service.TermService;
+import com.keshe.edumanage.dao.entity.CourseArrange;
+import com.keshe.edumanage.dao.entity.Term;
+import com.keshe.edumanage.util.ExcelUtils;
+import com.keshe.edumanage.util.LoggerUtil;
+import com.keshe.edumanage.util.result.Result;
+import com.keshe.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.service.CourseArrangeService;
+import com.keshe.edumanage.service.RolePermissionService;
+import com.keshe.edumanage.service.SpotService;
+import com.keshe.edumanage.service.TermService;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.subject.Subject;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;

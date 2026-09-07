@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.dao.mapper;
+package com.keshe.edumanage.dao.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 

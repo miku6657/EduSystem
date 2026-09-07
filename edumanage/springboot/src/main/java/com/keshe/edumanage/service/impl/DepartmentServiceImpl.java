@@ -1,8 +1,8 @@
-package com.qifangli.edumanage.service.impl;
+package com.keshe.edumanage.service.impl;
 
-import com.qifangli.edumanage.dao.entity.Department;
-import com.qifangli.edumanage.dao.mapper.DepartmentMapper;
-import com.qifangli.edumanage.service.DepartmentService;
+import com.keshe.edumanage.dao.entity.Department;
+import com.keshe.edumanage.dao.mapper.DepartmentMapper;
+import com.keshe.edumanage.service.DepartmentService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;

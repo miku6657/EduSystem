@@ -1,6 +1,6 @@
-package com.qifangli.edumanage.dao.mapper;
+package com.keshe.edumanage.dao.mapper;
 
-import com.qifangli.edumanage.dao.entity.RolePermission;
+import com.keshe.edumanage.dao.entity.RolePermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

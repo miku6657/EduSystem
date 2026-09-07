@@ -1,6 +1,6 @@
-package com.qifangli.edumanage.dao.mapper;
+package com.keshe.edumanage.dao.mapper;
 
-import com.qifangli.edumanage.dao.entity.Permission;
+import com.keshe.edumanage.dao.entity.Permission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

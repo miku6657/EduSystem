@@ -1,8 +1,8 @@
-package com.qifangli.edumanage.service.impl;
+package com.keshe.edumanage.service.impl;
 
-import com.qifangli.edumanage.dao.entity.Term;
-import com.qifangli.edumanage.dao.mapper.TermMapper;
-import com.qifangli.edumanage.service.TermService;
+import com.keshe.edumanage.dao.entity.Term;
+import com.keshe.edumanage.dao.mapper.TermMapper;
+import com.keshe.edumanage.service.TermService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 

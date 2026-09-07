@@ -1,15 +1,15 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qifangli.edumanage.dao.entity.Student;
-import com.qifangli.edumanage.dao.entity.Teacher;
-import com.qifangli.edumanage.service.StudentService;
-import com.qifangli.edumanage.util.Duration5Util;
-import com.qifangli.edumanage.util.LoggerUtil;
-import com.qifangli.edumanage.util.result.ResultUtils;
-import com.qifangli.edumanage.service.TeacherService;
-import com.qifangli.edumanage.util.JWTUtil;
-import com.qifangli.edumanage.util.result.Result;
+import com.keshe.edumanage.dao.entity.Student;
+import com.keshe.edumanage.dao.entity.Teacher;
+import com.keshe.edumanage.service.StudentService;
+import com.keshe.edumanage.util.Duration5Util;
+import com.keshe.edumanage.util.LoggerUtil;
+import com.keshe.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.service.TeacherService;
+import com.keshe.edumanage.util.JWTUtil;
+import com.keshe.edumanage.util.result.Result;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.time.Duration;
 import java.time.LocalDateTime;
 
 @RestController

@@ -1,7 +1,7 @@
-package com.qifangli.edumanage.service;
+package com.keshe.edumanage.service;
 
-import com.qifangli.edumanage.dao.entity.StudentScore;
-import com.qifangli.edumanage.dao.entity.Student;
+import com.keshe.edumanage.dao.entity.StudentScore;
+import com.keshe.edumanage.dao.entity.Student;
 
 import java.util.List;
 import java.util.Map;

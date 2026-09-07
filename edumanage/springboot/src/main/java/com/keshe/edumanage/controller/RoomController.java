@@ -1,12 +1,12 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qifangli.edumanage.dao.entity.CourseArrange;
-import com.qifangli.edumanage.dao.entity.Spot;
-import com.qifangli.edumanage.service.CourseArrangeService;
-import com.qifangli.edumanage.service.SpotService;
-import com.qifangli.edumanage.util.result.Result;
-import com.qifangli.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.dao.entity.CourseArrange;
+import com.keshe.edumanage.dao.entity.Spot;
+import com.keshe.edumanage.service.CourseArrangeService;
+import com.keshe.edumanage.service.SpotService;
+import com.keshe.edumanage.util.result.Result;
+import com.keshe.edumanage.util.result.ResultUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

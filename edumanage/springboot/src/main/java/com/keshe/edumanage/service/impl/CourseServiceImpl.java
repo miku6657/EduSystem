@@ -1,8 +1,8 @@
-package com.qifangli.edumanage.service.impl;
+package com.keshe.edumanage.service.impl;
 
-import com.qifangli.edumanage.dao.mapper.CourseMapper;
-import com.qifangli.edumanage.service.CourseService;
-import com.qifangli.edumanage.dao.entity.Course;
+import com.keshe.edumanage.dao.mapper.CourseMapper;
+import com.keshe.edumanage.service.CourseService;
+import com.keshe.edumanage.dao.entity.Course;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 

@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.config;
+package com.keshe.edumanage.config;
 
 import ch.qos.logback.classic.spi.CallerData;
 import ch.qos.logback.classic.spi.ILoggingEvent;

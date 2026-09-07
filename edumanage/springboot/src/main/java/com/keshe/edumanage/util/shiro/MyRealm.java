@@ -1,13 +1,13 @@
-package com.qifangli.edumanage.util.shiro;
+package com.keshe.edumanage.util.shiro;
 
-import com.qifangli.edumanage.dao.entity.Teacher;
-import com.qifangli.edumanage.service.PermissionService;
-import com.qifangli.edumanage.service.StudentService;
-import com.qifangli.edumanage.dao.entity.Permission;
-import com.qifangli.edumanage.dao.entity.Role;
-import com.qifangli.edumanage.dao.entity.Student;
-import com.qifangli.edumanage.service.RoleService;
-import com.qifangli.edumanage.service.TeacherService;
+import com.keshe.edumanage.dao.entity.Teacher;
+import com.keshe.edumanage.service.PermissionService;
+import com.keshe.edumanage.service.StudentService;
+import com.keshe.edumanage.dao.entity.Permission;
+import com.keshe.edumanage.dao.entity.Role;
+import com.keshe.edumanage.dao.entity.Student;
+import com.keshe.edumanage.service.RoleService;
+import com.keshe.edumanage.service.TeacherService;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;

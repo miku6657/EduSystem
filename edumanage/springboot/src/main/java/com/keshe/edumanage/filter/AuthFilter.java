@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.filter;
+package com.keshe.edumanage.filter;
 
 import com.alibaba.fastjson.JSONObject;
 import org.apache.shiro.web.filter.authc.UserFilter;

@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.dao.entity;
+package com.keshe.edumanage.dao.entity;
 
 public class Permission {
     private String pid;

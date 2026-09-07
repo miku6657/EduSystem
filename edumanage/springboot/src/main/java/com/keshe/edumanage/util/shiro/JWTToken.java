@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.util.shiro;
+package com.keshe.edumanage.util.shiro;
 
 import org.apache.shiro.authc.AuthenticationToken;
 

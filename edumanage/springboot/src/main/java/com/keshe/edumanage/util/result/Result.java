@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.util.result;
+package com.keshe.edumanage.util.result;
 
 import lombok.Data;
 

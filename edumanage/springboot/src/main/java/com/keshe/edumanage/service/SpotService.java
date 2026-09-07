@@ -1,6 +1,6 @@
-package com.qifangli.edumanage.service;
+package com.keshe.edumanage.service;
 
-import com.qifangli.edumanage.dao.entity.Spot;
+import com.keshe.edumanage.dao.entity.Spot;
 
 import java.util.List;
 

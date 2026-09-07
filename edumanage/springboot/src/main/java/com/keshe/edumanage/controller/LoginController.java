@@ -1,11 +1,11 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
 import com.alibaba.fastjson.JSONObject;
-import com.qifangli.edumanage.util.JWTUtil;
-import com.qifangli.edumanage.util.LoggerUtil;
-import com.qifangli.edumanage.util.result.Result;
-import com.qifangli.edumanage.util.result.ResultUtils;
-import com.qifangli.edumanage.util.yzm.VerifyCodeUtils;
+import com.keshe.edumanage.util.JWTUtil;
+import com.keshe.edumanage.util.LoggerUtil;
+import com.keshe.edumanage.util.result.Result;
+import com.keshe.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.util.yzm.VerifyCodeUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.UsernamePasswordToken;

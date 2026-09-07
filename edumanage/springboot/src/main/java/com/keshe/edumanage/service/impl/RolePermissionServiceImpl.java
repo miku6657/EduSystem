@@ -1,8 +1,8 @@
-package com.qifangli.edumanage.service.impl;
+package com.keshe.edumanage.service.impl;
 
-import com.qifangli.edumanage.dao.entity.RolePermission;
-import com.qifangli.edumanage.dao.mapper.RolePermissionMapper;
-import com.qifangli.edumanage.service.RolePermissionService;
+import com.keshe.edumanage.dao.entity.RolePermission;
+import com.keshe.edumanage.dao.mapper.RolePermissionMapper;
+import com.keshe.edumanage.service.RolePermissionService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;

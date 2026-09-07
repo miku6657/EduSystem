@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.util.shiro;
+package com.keshe.edumanage.util.shiro;
 
 public class JWTFilter {
 }

@@ -1,11 +1,11 @@
-package com.qifangli.edumanage.controller;
+package com.keshe.edumanage.controller;
 
-import com.qifangli.edumanage.dao.entity.Department;
-import com.qifangli.edumanage.service.DepartmentService;
-import com.qifangli.edumanage.service.TeacherService;
-import com.qifangli.edumanage.util.JWTUtil;
-import com.qifangli.edumanage.util.result.Result;
-import com.qifangli.edumanage.util.result.ResultUtils;
+import com.keshe.edumanage.dao.entity.Department;
+import com.keshe.edumanage.service.DepartmentService;
+import com.keshe.edumanage.service.TeacherService;
+import com.keshe.edumanage.util.JWTUtil;
+import com.keshe.edumanage.util.result.Result;
+import com.keshe.edumanage.util.result.ResultUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.subject.Subject;
 import org.springframework.web.bind.annotation.PostMapping;

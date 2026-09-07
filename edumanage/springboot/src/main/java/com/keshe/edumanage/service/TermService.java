@@ -1,6 +1,6 @@
-package com.qifangli.edumanage.service;
+package com.keshe.edumanage.service;
 
-import com.qifangli.edumanage.dao.entity.Term;
+import com.keshe.edumanage.dao.entity.Term;
 
 public interface TermService {
     Integer findLatestTerm();

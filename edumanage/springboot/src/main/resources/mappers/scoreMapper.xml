@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.qifangli.edumanage.dao.mapper.ScoreMapper">
-    <resultMap id ="ScoreInfoMap" type="com.qifangli.edumanage.dao.entity.Score">
+<mapper namespace="com.keshe.edumanage.dao.mapper.ScoreMapper">
+    <resultMap id ="ScoreInfoMap" type="com.keshe.edumanage.dao.entity.Score">
         <result column="stu_no" property="stuId"/>
         <result column="tea_crs_no" property="teaCrsId"/>
         <result column="score_pro" property="scorePro"/>
         <result column="score_end" property="scoreEnd"/>
         <result column="score" property="score"/>
     </resultMap>
-    <resultMap id ="TeaScoreInfoMap" type="com.qifangli.edumanage.dao.entity.Score">
+    <resultMap id ="TeaScoreInfoMap" type="com.keshe.edumanage.dao.entity.Score">
         <result column="stu_no" property="stuId"/>
         <result column="tea_crs_no" property="teaCrsId"/>
         <result column="score_pro" property="scorePro"/>

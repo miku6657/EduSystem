@@ -1,4 +1,4 @@
-package com.qifangli.edumanage.service;
+package com.keshe.edumanage.service;
 
 import java.util.List;
 

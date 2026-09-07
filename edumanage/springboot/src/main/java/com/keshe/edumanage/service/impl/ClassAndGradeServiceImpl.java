@@ -1,7 +1,7 @@
-package com.qifangli.edumanage.service.impl;
+package com.keshe.edumanage.service.impl;
 
-import com.qifangli.edumanage.dao.mapper.ClassAndGradeMapper;
-import com.qifangli.edumanage.service.ClassAndGradeService;
+import com.keshe.edumanage.dao.mapper.ClassAndGradeMapper;
+import com.keshe.edumanage.service.ClassAndGradeService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
