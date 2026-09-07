@@ -2,30 +2,35 @@ server:
   port: 8080
 
 spring:
-  mvc:
-    view:
-      prefix: /WEB-INF/jsp/
-      suffix: .jsp
+  application:
+    name: edumanage
+
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/edu_adm_sys?characterEncoding=UTF-8
+    url: jdbc:mysql://127.0.0.1:3306/eduSYSTEM?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-# shiro
-shiro:
-  sessionManager:
-    sessionIdCookieEnabled: true
-    sessionIdUrlRewritingEnabled: true
-  unauthorizedUrl: /unauthorized/noPerm
-  loginUrl: /unauthorized/noLogin
-  web:
-    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
 
-# mybatis
-mybatis:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  config-location: classpath:./mybatis-config.xml
-  mapper-locations: classpath*:/mappers/*.xml
+mybatis-plus:
+  mapper-locations: classpath:/mappers/*.xml
   type-aliases-package: com.keshe.edumanage.dao.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jwt:
+  secret: your-secret-key
+  expire: 7200000
+
+
+
+
+
+logging:
+  level:
+    com.keshe.edumanage: debug
