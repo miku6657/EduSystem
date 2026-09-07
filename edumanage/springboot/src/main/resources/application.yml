@@ -1,0 +1,31 @@
+server:
+  port: 8080
+
+spring:
+  mvc:
+    view:
+      prefix: /WEB-INF/jsp/
+      suffix: .jsp
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/edu_adm_sys?characterEncoding=UTF-8
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# shiro
+shiro:
+  sessionManager:
+    sessionIdCookieEnabled: true
+    sessionIdUrlRewritingEnabled: true
+  unauthorizedUrl: /unauthorized/noPerm
+  loginUrl: /unauthorized/noLogin
+  web:
+    enabled: true
+
+# mybatis
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  config-location: classpath:./mybatis-config.xml
+  mapper-locations: classpath*:/mappers/*.xml
+  type-aliases-package: com.keshe.edumanage.dao.entity

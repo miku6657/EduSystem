@@ -1,4 +1,4 @@
-package com.keshe.edumanage.util.shiro;
+package com.keshe.edumanage.security;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
