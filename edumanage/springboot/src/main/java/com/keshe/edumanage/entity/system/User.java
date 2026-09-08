@@ -1,24 +1,16 @@
-package com.keshe.edumanage.entity;
+package com.keshe.edumanage.entity.system;
 
 
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.keshe.edumanage.entity.BaseEntity;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 
-/**
- * 系统用户
- */
 @Data
 @TableName("sys_user")
+@EqualsAndHashCode(callSuper = true)
 public class User extends BaseEntity {
-
-
-    /**
-     * 用户ID
-     */
-    @TableId
-    private Long id;
 
 
     /**
@@ -35,19 +27,12 @@ public class User extends BaseEntity {
 
     /**
      * 角色
-     *
-     * ADMIN
-     * TEACHER
-     * STUDENT
      */
     private String role;
 
 
     /**
      * 状态
-     *
-     * 1 正常
-     * 0 禁用
      */
     private Integer status;
 

@@ -2,7 +2,7 @@ package com.keshe.edumanage.controller;
 
 
 import com.keshe.edumanage.common.result.Result;
-import com.keshe.edumanage.entity.User;
+import com.keshe.edumanage.entity.system.User;
 import com.keshe.edumanage.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class UserController {
             @PathVariable("username") String username
     ){
 
-        User user = userService.getByUsername(username);
+        User user = userService.findByUsername(username);
 
         return Result.success(user);
     }

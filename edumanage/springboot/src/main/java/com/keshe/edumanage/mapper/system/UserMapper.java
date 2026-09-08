@@ -1,8 +1,8 @@
-package com.keshe.edumanage.mapper;
+package com.keshe.edumanage.mapper.system;
 
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.keshe.edumanage.entity.User;
+import com.keshe.edumanage.entity.system.User;
 import org.apache.ibatis.annotations.Mapper;
 
 

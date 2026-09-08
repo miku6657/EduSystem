@@ -1,44 +1,26 @@
-package com.keshe.edumanage.service.impl;
+package com.keshe.edumanage.service;
 
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.keshe.edumanage.entity.User;
-import com.keshe.edumanage.mapper.UserMapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.keshe.edumanage.entity.system.User;
+import com.keshe.edumanage.mapper.system.UserMapper;
 import com.keshe.edumanage.service.UserService;
-
 import org.springframework.stereotype.Service;
 
-import lombok.RequiredArgsConstructor;
 
-
-
-/**
- * 用户业务实现
- */
 @Service
-@RequiredArgsConstructor
-public class UserServiceImpl implements UserService {
-
-
-    private final UserMapper userMapper;
-
+public class UserServiceImpl
+        extends ServiceImpl<UserMapper, User>
+        implements UserService {
 
 
     @Override
-    public User getByUsername(String username) {
+    public User findByUsername(String username) {
 
 
-        QueryWrapper<User> wrapper =
-                new QueryWrapper<>();
-
-
-        wrapper.eq(
-                "username",
-                username
-        );
-
-
-        return userMapper.selectOne(wrapper);
+        return lambdaQuery()
+                .eq(User::getUsername, username)
+                .one();
 
     }
 

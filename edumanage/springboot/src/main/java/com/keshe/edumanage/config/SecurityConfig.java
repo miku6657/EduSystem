@@ -1,23 +1,38 @@
 package com.keshe.edumanage.config;
 
 
+import com.keshe.edumanage.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
+
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+
+
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
-/**
- * Spring Security配置
- */
+import jakarta.servlet.http.HttpServletResponse;
+
+
+
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
 
 
-    /**
-     * Security过滤链
-     */
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http
@@ -30,16 +45,74 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
 
 
-                //请求权限配置
+                //JWT无状态
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+
+                //异常处理
+                .exceptionHandling(exception -> exception
+
+
+                        //没有登录
+                        .authenticationEntryPoint(
+                                (request,response,authException)->{
+
+                                    response.setStatus(
+                                            HttpServletResponse.SC_UNAUTHORIZED
+                                    );
+
+                                }
+                        )
+
+
+                        //没有权限
+                        .accessDeniedHandler(
+                                (request,response,accessDeniedException)->{
+
+                                    response.setStatus(
+                                            HttpServletResponse.SC_FORBIDDEN
+                                    );
+
+                                }
+                        )
+
+                )
+
+
                 .authorizeHttpRequests(auth -> auth
 
-                        //所有请求暂时放行
-                        .anyRequest()
+
+                        .requestMatchers(
+                                "/api/auth/login"
+                        )
                         .permitAll()
+
+
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        )
+                        .permitAll()
+
+
+                        .anyRequest()
+                        .authenticated()
+
+                )
+
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
 
         return http.build();
+
     }
 
 }

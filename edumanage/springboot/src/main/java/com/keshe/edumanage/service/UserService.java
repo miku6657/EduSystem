@@ -1,7 +1,7 @@
 package com.keshe.edumanage.service;
 
 
-import com.keshe.edumanage.entity.User;
+import com.keshe.edumanage.entity.system.User;
 
 
 /**
@@ -13,7 +13,7 @@ public interface UserService {
     /**
      * 根据用户名查询用户
      */
-    User getByUsername(String username);
+    User findByUsername(String username);
 
 
 }
