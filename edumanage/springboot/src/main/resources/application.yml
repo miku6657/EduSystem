@@ -27,6 +27,11 @@ jwt:
   secret: your-secret-key
   expire: 7200000
 
+cas:
+  server-url-prefix: http://localhost:8081/cas
+  client-service-url: http://localhost:8080/api/auth/cas/callback
+
+
 
 
 
