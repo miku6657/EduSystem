@@ -13,74 +13,107 @@ import java.util.List;
  * 课程信息接口
  */
 @RestController
-@RequestMapping("/api/course")
+@RequestMapping("/api/courses")
 @RequiredArgsConstructor
 public class CourseController {
 
     private final CourseService courseService;
 
     /**
-     * 分页条件查询课程（支持按名称/代码关键字、类型、教研室过滤）
+     * 查询课程列表
+     * GET /api/courses
      */
-    @GetMapping("/page")
+    @GetMapping
     public Result<Page<Course>> page(
             @RequestParam(defaultValue = "1") Integer pageNo,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) Long teachingGroupId) {
+            @RequestParam(required = false) Long teachingGroupId,
+            @RequestParam(required = false) String courseCode
+    ) {
         Page<Course> page = courseService.pageCourses(
-                new Page<>(pageNo, pageSize), keyword, type, teachingGroupId);
+                new Page<>(pageNo, pageSize),
+                keyword,
+                type,
+                teachingGroupId
+        );
         return Result.success(page);
     }
 
     /**
-     * 根据ID查询课程
+     * 查询课程详情
+     * GET /api/courses/{id}
      */
     @GetMapping("/{id}")
-    public Result<Course> getById(@PathVariable Long id) {
-        return Result.success(courseService.getById(id));
+    public Result<Course> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                courseService.getById(id)
+        );
     }
 
     /**
-     * 根据课程代码查询课程
+     * 根据课程代码查询
+     * GET /api/courses?courseCode=xxx
      */
-    @GetMapping("/by-code/{courseCode}")
-    public Result<Course> getByCourseCode(@PathVariable String courseCode) {
-        return Result.success(courseService.getByCourseCode(courseCode));
+    @GetMapping(params = "courseCode")
+    public Result<Course> getByCourseCode(
+            @RequestParam String courseCode
+    ) {
+        return Result.success(
+                courseService.getByCourseCode(courseCode)
+        );
     }
 
     /**
-     * 查询某教研室的课程
+     * 查询教研室课程
+     * GET /api/courses?teachingGroupId=xxx
      */
-    @GetMapping("/list-by-teaching-group/{teachingGroupId}")
-    public Result<List<Course>> listByTeachingGroup(@PathVariable Long teachingGroupId) {
-        return Result.success(courseService.listByTeachingGroup(teachingGroupId));
+    @GetMapping(params = "teachingGroupId")
+    public Result<List<Course>> listByTeachingGroup(
+            @RequestParam Long teachingGroupId
+    ) {
+        return Result.success(
+                courseService.listByTeachingGroup(teachingGroupId)
+        );
     }
 
     /**
      * 新增课程
+     * POST /api/courses
      */
     @PostMapping
-    public Result<Void> save(@RequestBody Course course) {
+    public Result<Void> save(
+            @RequestBody Course course
+    ) {
         courseService.save(course);
         return Result.success();
     }
 
     /**
      * 修改课程
+     * PUT /api/courses/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody Course course) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody Course course
+    ) {
+        course.setId(id);
         courseService.updateById(course);
         return Result.success();
     }
 
     /**
      * 删除课程
+     * DELETE /api/courses/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         courseService.removeById(id);
         return Result.success();
     }

@@ -8,57 +8,82 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * 专业信息接口
- */
 @RestController
-@RequestMapping("/api/major")
+@RequestMapping("/api/majors")
 @RequiredArgsConstructor
 public class MajorController {
 
     private final MajorService majorService;
 
     /**
-     * 查询全部专业
+     * 查询专业列表
+     * GET /api/majors
      */
-    @GetMapping("/list")
-    public Result<List<Major>> list() {
-        return Result.success(majorService.list());
+    @GetMapping
+    public Result<List<Major>> list(
+            @RequestParam(required = false) Long departmentId
+    ) {
+
+        if (departmentId != null) {
+            return Result.success(
+                    majorService.lambdaQuery()
+                            .eq(Major::getDepartmentId, departmentId)
+                            .list()
+            );
+        }
+
+        return Result.success(
+                majorService.list()
+        );
     }
 
     /**
-     * 查询某系部下的专业
+     * 查询专业详情
+     * GET /api/majors/{id}
      */
-    @GetMapping("/list-by-department/{departmentId}")
-    public Result<List<Major>> listByDepartment(@PathVariable Long departmentId) {
-        return Result.success(majorService.lambdaQuery()
-                .eq(Major::getDepartmentId, departmentId)
-                .list());
+    @GetMapping("/{id}")
+    public Result<Major> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                majorService.getById(id)
+        );
     }
 
     /**
      * 新增专业
+     * POST /api/majors
      */
     @PostMapping
-    public Result<Void> save(@RequestBody Major major) {
+    public Result<Void> save(
+            @RequestBody Major major
+    ) {
         majorService.save(major);
         return Result.success();
     }
 
     /**
      * 修改专业
+     * PUT /api/majors/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody Major major) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody Major major
+    ) {
+        major.setId(id);
         majorService.updateById(major);
         return Result.success();
     }
 
     /**
      * 删除专业
+     * DELETE /api/majors/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         majorService.removeById(id);
         return Result.success();
     }

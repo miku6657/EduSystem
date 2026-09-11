@@ -13,69 +13,100 @@ import java.util.List;
  * 教室信息接口
  */
 @RestController
-@RequestMapping("/api/classroom")
+@RequestMapping("/api/classrooms")
 @RequiredArgsConstructor
 public class ClassroomController {
 
     private final ClassroomService classroomService;
 
     /**
-     * 分页条件查询教室（支持按编号、校区、类型、使用状况过滤）
+     * 分页查询教室
+     * GET /api/classrooms
      */
-    @GetMapping("/page")
+    @GetMapping
     public Result<Page<Classroom>> page(
             @RequestParam(defaultValue = "1") Integer pageNo,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String roomNo,
             @RequestParam(required = false) Long campusId,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
-        Page<Classroom> page = classroomService.pageClassrooms(
-                new Page<>(pageNo, pageSize), roomNo, campusId, type, status);
+            @RequestParam(required = false) String status
+    ) {
+        Page<Classroom> page =
+                classroomService.pageClassrooms(
+                        new Page<>(pageNo, pageSize),
+                        roomNo,
+                        campusId,
+                        type,
+                        status
+                );
         return Result.success(page);
     }
 
     /**
-     * 根据ID查询教室
+     * 查询教室详情
+     * GET /api/classrooms/{id}
      */
     @GetMapping("/{id}")
-    public Result<Classroom> getById(@PathVariable Long id) {
-        return Result.success(classroomService.getById(id));
+    public Result<Classroom> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                classroomService.getById(id)
+        );
     }
 
     /**
-     * 查询某校区下指定类型的空闲教室
+     * 查询空闲教室
+     * GET /api/classrooms/free
      */
     @GetMapping("/free")
     public Result<List<Classroom>> listFree(
             @RequestParam(required = false) Long campusId,
-            @RequestParam(required = false) String type) {
-        return Result.success(classroomService.listFreeClassrooms(campusId, type));
+            @RequestParam(required = false) String type
+    ) {
+        return Result.success(
+                classroomService.listFreeClassrooms(
+                        campusId,
+                        type
+                )
+        );
     }
 
     /**
      * 新增教室
+     * POST /api/classrooms
      */
     @PostMapping
-    public Result<Void> save(@RequestBody Classroom classroom) {
+    public Result<Void> save(
+            @RequestBody Classroom classroom
+    ) {
         classroomService.save(classroom);
         return Result.success();
     }
 
     /**
      * 修改教室
+     * PUT /api/classrooms/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody Classroom classroom) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody Classroom classroom
+    ) {
+        classroom.setId(id);
         classroomService.updateById(classroom);
         return Result.success();
     }
 
     /**
      * 删除教室
+     * DELETE /api/classrooms/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         classroomService.removeById(id);
         return Result.success();
     }

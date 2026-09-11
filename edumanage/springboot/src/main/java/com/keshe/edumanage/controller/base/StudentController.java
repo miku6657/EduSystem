@@ -13,74 +13,106 @@ import java.util.List;
  * 学生信息接口
  */
 @RestController
-@RequestMapping("/api/student")
+@RequestMapping("/api/students")
 @RequiredArgsConstructor
 public class StudentController {
 
     private final StudentService studentService;
 
     /**
-     * 分页条件查询学生（支持按姓名/学号关键字、班级、学籍状态过滤）
+     * 分页条件查询学生
+     * GET /api/students
      */
-    @GetMapping("/page")
+    @GetMapping
     public Result<Page<Student>> page(
             @RequestParam(defaultValue = "1") Integer pageNo,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long classId,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status
+    ) {
         Page<Student> page = studentService.pageStudents(
-                new Page<>(pageNo, pageSize), keyword, classId, status);
+                new Page<>(pageNo, pageSize),
+                keyword,
+                classId,
+                status
+        );
         return Result.success(page);
     }
 
     /**
-     * 根据ID查询学生
+     * 查询学生详情
+     * GET /api/students/{id}
      */
     @GetMapping("/{id}")
-    public Result<Student> getById(@PathVariable Long id) {
-        return Result.success(studentService.getById(id));
+    public Result<Student> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                studentService.getById(id)
+        );
     }
 
     /**
      * 根据学号查询学生
+     * GET /api/students?studentNo=xxx
      */
-    @GetMapping("/by-no/{studentNo}")
-    public Result<Student> getByStudentNo(@PathVariable String studentNo) {
-        return Result.success(studentService.getByStudentNo(studentNo));
+    @GetMapping(params = "studentNo")
+    public Result<Student> getByStudentNo(
+            @RequestParam String studentNo
+    ) {
+        return Result.success(
+                studentService.getByStudentNo(studentNo)
+        );
     }
 
     /**
-     * 查询某班级下的全部学生
+     * 查询班级学生
+     * GET /api/students?classId=xxx
      */
-    @GetMapping("/list-by-class/{classId}")
-    public Result<List<Student>> listByClass(@PathVariable Long classId) {
-        return Result.success(studentService.listByClass(classId));
+    @GetMapping(params = "classId")
+    public Result<List<Student>> listByClass(
+            @RequestParam Long classId
+    ) {
+        return Result.success(
+                studentService.listByClass(classId)
+        );
     }
 
     /**
      * 新增学生
+     * POST /api/students
      */
     @PostMapping
-    public Result<Void> save(@RequestBody Student student) {
+    public Result<Void> save(
+            @RequestBody Student student
+    ) {
         studentService.save(student);
         return Result.success();
     }
 
     /**
      * 修改学生
+     * PUT /api/students/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody Student student) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody Student student
+    ) {
+        student.setId(id);
         studentService.updateById(student);
         return Result.success();
     }
 
     /**
      * 删除学生
+     * DELETE /api/students/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         studentService.removeById(id);
         return Result.success();
     }

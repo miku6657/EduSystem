@@ -36,7 +36,13 @@ public interface ExamInfoService extends IService<ExamInfo> {
      * @param examType 考试类型（可为空）
      * @return 考试分页数据
      */
-    Page<ExamInfo> pageExams(Page<ExamInfo> page, String name, Long termId, String examType);
+    Page<ExamInfo> pageExams(
+            Page<ExamInfo> page,
+            String name,
+            Long termId,
+            Long courseId,
+            String examType
+    );
 
     /**
      * 查询某学期的考试列表

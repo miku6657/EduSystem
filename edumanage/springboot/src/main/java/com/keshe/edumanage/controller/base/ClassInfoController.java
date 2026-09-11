@@ -13,67 +13,95 @@ import java.util.List;
  * 班级信息接口
  */
 @RestController
-@RequestMapping("/api/class")
+@RequestMapping("/api/classes")
 @RequiredArgsConstructor
 public class ClassInfoController {
 
     private final ClassInfoService classInfoService;
 
     /**
-     * 分页条件查询班级（支持按名称、专业、校区、年级过滤）
+     * 分页条件查询班级
+     * GET /api/classes
      */
-    @GetMapping("/page")
+    @GetMapping
     public Result<Page<ClassInfo>> page(
             @RequestParam(defaultValue = "1") Integer pageNo,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Long majorId,
             @RequestParam(required = false) Long campusId,
-            @RequestParam(required = false) String grade) {
+            @RequestParam(required = false) String grade
+    ) {
         Page<ClassInfo> page = classInfoService.pageClasses(
-                new Page<>(pageNo, pageSize), name, majorId, campusId, grade);
+                new Page<>(pageNo, pageSize),
+                name,
+                majorId,
+                campusId,
+                grade
+        );
         return Result.success(page);
     }
 
     /**
-     * 根据ID查询班级
+     * 查询班级详情
+     * GET /api/classes/{id}
      */
     @GetMapping("/{id}")
-    public Result<ClassInfo> getById(@PathVariable Long id) {
-        return Result.success(classInfoService.getById(id));
+    public Result<ClassInfo> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                classInfoService.getById(id)
+        );
     }
 
     /**
      * 查询某专业下的班级
+     * GET /api/classes?majorId=xxx
      */
-    @GetMapping("/list-by-major/{majorId}")
-    public Result<List<ClassInfo>> listByMajor(@PathVariable Long majorId) {
-        return Result.success(classInfoService.listByMajor(majorId));
+    @GetMapping(params = "majorId")
+    public Result<List<ClassInfo>> listByMajor(
+            @RequestParam Long majorId
+    ) {
+        return Result.success(
+                classInfoService.listByMajor(majorId)
+        );
     }
 
     /**
      * 新增班级
+     * POST /api/classes
      */
     @PostMapping
-    public Result<Void> save(@RequestBody ClassInfo classInfo) {
+    public Result<Void> save(
+            @RequestBody ClassInfo classInfo
+    ) {
         classInfoService.save(classInfo);
         return Result.success();
     }
 
     /**
      * 修改班级
+     * PUT /api/classes/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody ClassInfo classInfo) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody ClassInfo classInfo
+    ) {
+        classInfo.setId(id);
         classInfoService.updateById(classInfo);
         return Result.success();
     }
 
     /**
      * 删除班级
+     * DELETE /api/classes/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         classInfoService.removeById(id);
         return Result.success();
     }

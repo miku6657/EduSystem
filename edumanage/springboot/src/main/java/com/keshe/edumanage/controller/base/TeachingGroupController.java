@@ -8,57 +8,84 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * 教研室信息接口
- */
 @RestController
-@RequestMapping("/api/teaching-group")
+@RequestMapping("/api/teaching-groups")
 @RequiredArgsConstructor
 public class TeachingGroupController {
 
     private final TeachingGroupService teachingGroupService;
 
     /**
-     * 查询全部教研室
+     * 查询教研室列表
+     * GET /api/teaching-groups
      */
-    @GetMapping("/list")
-    public Result<List<TeachingGroup>> list() {
-        return Result.success(teachingGroupService.list());
+    @GetMapping
+    public Result<List<TeachingGroup>> list(
+            @RequestParam(required = false) Long departmentId
+    ) {
+        if (departmentId != null) {
+            return Result.success(
+                    teachingGroupService.lambdaQuery()
+                            .eq(
+                                    TeachingGroup::getDepartmentId,
+                                    departmentId
+                            )
+                            .list()
+            );
+        }
+
+        return Result.success(
+                teachingGroupService.list()
+        );
     }
 
     /**
-     * 查询某系部下的教研室
+     * 查询教研室详情
+     * GET /api/teaching-groups/{id}
      */
-    @GetMapping("/list-by-department/{departmentId}")
-    public Result<List<TeachingGroup>> listByDepartment(@PathVariable Long departmentId) {
-        return Result.success(teachingGroupService.lambdaQuery()
-                .eq(TeachingGroup::getDepartmentId, departmentId)
-                .list());
+    @GetMapping("/{id}")
+    public Result<TeachingGroup> getById(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                teachingGroupService.getById(id)
+        );
     }
 
     /**
      * 新增教研室
+     * POST /api/teaching-groups
      */
     @PostMapping
-    public Result<Void> save(@RequestBody TeachingGroup teachingGroup) {
+    public Result<Void> save(
+            @RequestBody TeachingGroup teachingGroup
+    ) {
         teachingGroupService.save(teachingGroup);
         return Result.success();
     }
 
     /**
      * 修改教研室
+     * PUT /api/teaching-groups/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody TeachingGroup teachingGroup) {
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody TeachingGroup teachingGroup
+    ) {
+        teachingGroup.setId(id);
         teachingGroupService.updateById(teachingGroup);
         return Result.success();
     }
 
     /**
      * 删除教研室
+     * DELETE /api/teaching-groups/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         teachingGroupService.removeById(id);
         return Result.success();
     }
