@@ -1,0 +1,77 @@
+/* 师生端全局样式：移动优先，页面主体居中限宽，桌面端同样可看 */
+:root {
+  --st-primary: #1989fa;
+  --st-bg: #f5f6f8;
+  --st-text: #323233;
+  --st-text-light: #969799;
+  --st-border: #ebedf0;
+  --st-page-max-width: 640px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--st-text);
+  background: var(--st-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 页面容器：限宽居中，底部留出 tabbar 高度 */
+.st-page {
+  width: 100%;
+  max-width: var(--st-page-max-width);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 12px 12px calc(64px + env(safe-area-inset-bottom));
+}
+
+/* 无 tabbar 的页面（登录页等） */
+.st-page--plain {
+  padding-bottom: 16px;
+}
+
+.st-section-title {
+  margin: 16px 4px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--st-text-light);
+}
+
+.st-card {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.st-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.st-muted {
+  color: var(--st-text-light);
+  font-size: 12px;
+}
+
+.st-empty {
+  padding: 32px 0;
+}

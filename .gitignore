@@ -3,3 +3,10 @@
 
 # Qodana
 qodana.yaml
+
+# 本地 npm 缓存（沙箱内安装依赖时把缓存放进了工作区，不应入库）
+.npm-cache/
+
+# 前端依赖与构建产物（各子工程另有自己的 .gitignore，这里兜底）
+node_modules/
+dist/
