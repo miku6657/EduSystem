@@ -7,7 +7,7 @@ const courseAdjustRoutes: RouteRecordRaw[] = [
     path: 'course-adjust',
     name: 'CourseAdjust',
     redirect: '/course-adjust/audit-list',
-    meta: { title: '调课管理', icon: Calendar, roles: ['admin', 'manager'] },
+    meta: { title: '调课管理', icon: Calendar, roles: ['ADMIN', 'MANAGER'] },
     children: [
       {
         path: 'audit-list',

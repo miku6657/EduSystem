@@ -7,7 +7,7 @@ const upgradeRoutes: RouteRecordRaw[] = [
     path: 'college-upgrade',
     name: 'CollegeUpgrade',
     redirect: '/college-upgrade/apply-list',
-    meta: { title: '专升本', icon: TrendCharts, roles: ['admin'] },
+    meta: { title: '专升本', icon: TrendCharts, roles: ['ADMIN'] },
     children: [
       {
         path: 'apply-list',

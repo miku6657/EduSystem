@@ -7,7 +7,7 @@ const examRoutes: RouteRecordRaw[] = [
     path: 'exam',
     name: 'Exam',
     redirect: '/exam/arrange',
-    meta: { title: '考务管理', icon: Tickets, roles: ['admin'] },
+    meta: { title: '考务管理', icon: Tickets, roles: ['ADMIN'] },
     children: [
       {
         path: 'arrange',

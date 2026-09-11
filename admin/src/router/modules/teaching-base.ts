@@ -10,7 +10,7 @@ const teachingBaseRoutes: RouteRecordRaw[] = [
     path: 'base-data',
     name: 'BaseData',
     redirect: '/base-data/course',
-    meta: { title: '教学基础数据', icon: Notebook, roles: ['admin', 'manager'] },
+    meta: { title: '教学基础数据', icon: Notebook, roles: ['ADMIN', 'MANAGER'] },
     children: [
       {
         path: 'course',

@@ -7,7 +7,7 @@ const classroomRoutes: RouteRecordRaw[] = [
     path: 'classroom',
     name: 'Classroom',
     component: () => import('@/views/classroom-apply/index.vue'),
-    meta: { title: '教室审批', icon: OfficeBuilding, roles: ['admin', 'manager'] },
+    meta: { title: '教室审批', icon: OfficeBuilding, roles: ['ADMIN', 'MANAGER'] },
   },
 ]
 

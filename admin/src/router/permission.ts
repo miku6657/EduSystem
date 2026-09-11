@@ -13,8 +13,8 @@ export function hasMenuPermission(
 
 /**
  * 根据用户角色递归过滤侧边栏菜单：
- * - admin：全部菜单可见（meta.roles 含 admin 或未配置）
- * - manager：仅教学基础数据 / 教室申请 / 调课管理 / 毕业审核
+ * - ADMIN：全部菜单可见（meta.roles 含 ADMIN 或未配置）
+ * - MANAGER：仅教学基础数据 / 教室申请 / 调课管理 / 毕业审核
  */
 export function filterMenusByRoles(routes: RouteRecordRaw[], roles: string[]) {
   const result: RouteRecordRaw[] = []

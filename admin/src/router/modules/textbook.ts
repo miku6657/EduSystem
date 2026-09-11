@@ -7,7 +7,7 @@ const textbookRoutes: RouteRecordRaw[] = [
     path: 'textbook',
     name: 'Textbook',
     redirect: '/textbook/stock-in',
-    meta: { title: '教材管理', icon: Reading, roles: ['admin'] },
+    meta: { title: '教材管理', icon: Reading, roles: ['ADMIN'] },
     children: [
       {
         path: 'stock-in',
