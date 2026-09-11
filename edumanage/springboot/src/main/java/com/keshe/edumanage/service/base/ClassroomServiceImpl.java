@@ -38,4 +38,5 @@ public class ClassroomServiceImpl extends ServiceImpl<ClassroomMapper, Classroom
                 .eq(Classroom::getStatus, STATUS_FREE)
                 .list();
     }
+
 }

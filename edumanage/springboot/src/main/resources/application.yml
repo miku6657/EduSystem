@@ -30,6 +30,7 @@ jwt:
 cas:
   server-url-prefix: http://localhost:8081/cas
   client-service-url: http://localhost:8080/api/auth/cas/callback
+  frontend-redirect-url: http://localhost:5173/cas/callback
 
 
 
