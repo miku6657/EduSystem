@@ -148,21 +148,31 @@ const scores: MockRow[] = [
   { id: 8, examId: 2, studentId: 4, score: null, status: 'ABSENT' },
 ]
 
-/** 教学任务（任课关系）——后端已新增 base_teaching_task 表，这里与其种子数据保持一致 */
-const teacherClasses: MockRow[] = [
-  { teacherId: 1, classId: 1 },
-  { teacherId: 1, classId: 2 },
-  { teacherId: 2, classId: 1 },
-  { teacherId: 3, classId: 1 },
-  { teacherId: 3, classId: 2 },
-  { teacherId: 4, classId: 3 },
+/** 教学任务（任课关系 + 上课时间）——与后端 base_teaching_task 及其种子数据一致 */
+const teachingTasks: MockRow[] = [
+  { id: 1, teacherId: 1, courseId: 1, classId: 1, termId: 2, weekday: 1, startSection: 1, endSection: 2, classroomId: 1, weeks: '1-16周' },
+  { id: 2, teacherId: 1, courseId: 1, classId: 2, termId: 2, weekday: 2, startSection: 3, endSection: 4, classroomId: 2, weeks: '1-16周' },
+  { id: 3, teacherId: 2, courseId: 2, classId: 1, termId: 2, weekday: 3, startSection: 3, endSection: 4, classroomId: 3, weeks: '1-16周' },
+  { id: 4, teacherId: 3, courseId: 3, classId: 1, termId: 2, weekday: 3, startSection: 5, endSection: 6, classroomId: 3, weeks: '1-16周' },
+  { id: 5, teacherId: 3, courseId: 3, classId: 2, termId: 2, weekday: 4, startSection: 1, endSection: 2, classroomId: 2, weeks: '1-16周' },
+  { id: 6, teacherId: 4, courseId: 4, classId: 3, termId: 2, weekday: 5, startSection: 3, endSection: 4, classroomId: 5, weeks: '1-16周' },
 ]
 
-const teacherCourses: MockRow[] = [
-  { teacherId: 1, courseId: 1 },
-  { teacherId: 2, courseId: 2 },
-  { teacherId: 3, courseId: 3 },
-  { teacherId: 4, courseId: 4 },
+/** 教师任教班级 / 课程（由教学任务派生，避免两处数据不一致） */
+const teacherClasses: MockRow[] = teachingTasks.map((task) => ({
+  teacherId: task.teacherId,
+  classId: task.classId,
+}))
+
+const teacherCourses: MockRow[] = teachingTasks.map((task) => ({
+  teacherId: task.teacherId,
+  courseId: task.courseId,
+}))
+
+/** 调课申请（course_adjust；status：待审核/已通过/已驳回/已撤销） */
+const courseAdjusts: MockRow[] = [
+  { id: 1, teacherId: 1, courseId: 1, classId: 1, originDate: dayOffset(1), originSlot: '第1-2节', targetDate: dayOffset(2), targetSlot: '第3-4节', classroomId: 1, reason: '参加校级教学能力比赛，申请顺延一天', status: '待审核', approveRemark: null, createTime: `${dayOffset(0)} 08:30` },
+  { id: 2, teacherId: 2, courseId: 2, classId: 1, originDate: dayOffset(2), originSlot: '第3-4节', targetDate: dayOffset(3), targetSlot: '第1-2节', classroomId: 3, reason: '机房设备检修，调整到次日上机', status: '已通过', approveRemark: '同意调整', createTime: `${dayOffset(-2)} 14:10` },
 ]
 
 /** 学生考勤（status：正常/迟到/缺勤/请假） */
@@ -378,6 +388,30 @@ function enrichClassroomApply(row: MockRow): MockRow {
   }
 }
 
+/** 教学任务补全课程/班级/教师/教室名称，课表直接可用 */
+function enrichTeachingTask(row: MockRow): MockRow {
+  const room = classrooms.find((item) => item.id === row.classroomId)
+  return {
+    ...row,
+    courseName: courseOf(row.courseId)?.name ?? `课程#${row.courseId}`,
+    className: classOf(row.classId)?.name ?? `班级#${row.classId}`,
+    teacherName: teacherOf(row.teacherId)?.name ?? null,
+    roomName: room?.roomNo ?? null,
+  }
+}
+
+/** 调课申请补全教师/课程/班级/教室名称 */
+function enrichCourseAdjust(row: MockRow): MockRow {
+  const room = classrooms.find((item) => item.id === row.classroomId)
+  return {
+    ...row,
+    teacherName: teacherOf(row.teacherId)?.name ?? null,
+    courseName: courseOf(row.courseId)?.name ?? `课程#${row.courseId}`,
+    className: row.classId ? (classOf(row.classId)?.name ?? null) : null,
+    roomName: room?.roomNo ?? null,
+  }
+}
+
 /** 学生登录名 → 学号（支持"学号"与 student01 这类别名） */
 function resolveStudentAccount(username: string): MockRow | undefined {
   const alias: Record<string, string> = { student01: '2023005001', student02: '2023005002', student03: '2023005003', student04: '2023005004' }
@@ -499,6 +533,102 @@ function handleApi(ctx: MockContext) {
     const teacherId = Number(teacherCoursesRoute[1])
     const ids = teacherCourses.filter((item) => item.teacherId === teacherId).map((item) => item.courseId)
     return ok(courses.filter((item) => ids.includes(item.id)))
+  }
+
+  /* ---------- 教学任务 / 课表（?teacherId= 教师视角，?classId= 学生视角） ---------- */
+  if (path === '/api/teaching-tasks') {
+    const teacherId = Number(query.teacherId ?? 0)
+    const classId = Number(query.classId ?? 0)
+    let list = teachingTasks
+    if (teacherId) {
+      list = list.filter((item) => item.teacherId === teacherId)
+    } else if (classId) {
+      list = list.filter((item) => item.classId === classId)
+    }
+    return ok(
+      list
+        .slice()
+        .sort((a, b) => Number(a.weekday ?? 9) - Number(b.weekday ?? 9) || Number(a.startSection ?? 0) - Number(b.startSection ?? 0))
+        .map(enrichTeachingTask),
+    )
+  }
+
+  /* ---------- 调课申请：提交 / 我的 / 审批列表 / 撤销 ---------- */
+  if (path === '/api/course-adjusts') {
+    const courseId = Number(body.courseId ?? 0)
+    if (!courseId) {
+      // 无 body 视为审批列表（GET）
+      const status = String(query.status ?? '')
+      const list = courseAdjusts
+        .filter((item) => !status || item.status === status)
+        .sort((a, b) => Number(b.id) - Number(a.id))
+        .map(enrichCourseAdjust)
+      return ok(list)
+    }
+    const teacher = teachers.find((item) => item.teacherNo === currentUsername)
+    if (!teacher) {
+      return fail('只有教师可以提交调课申请')
+    }
+    const originDate = String(body.originDate ?? '')
+    const targetDate = String(body.targetDate ?? '')
+    const originSlot = String(body.originSlot ?? '')
+    const targetSlot = String(body.targetSlot ?? '')
+    if (!originDate || !targetDate || !originSlot || !targetSlot) {
+      return fail('请填写原上课时间与调整后时间')
+    }
+    if (originDate === targetDate && originSlot === targetSlot) {
+      return fail('调整后的时间与原时间相同，无需调课')
+    }
+    if (!String(body.reason ?? '').trim()) {
+      return fail('请填写调课原因')
+    }
+    const created = {
+      id: nextId(),
+      teacherId: teacher.id,
+      courseId,
+      classId: body.classId ? Number(body.classId) : null,
+      originDate,
+      originSlot,
+      targetDate,
+      targetSlot,
+      classroomId: body.classroomId ? Number(body.classroomId) : null,
+      reason: String(body.reason).trim(),
+      status: '待审核',
+      approveRemark: null,
+      createTime: nowText(),
+    }
+    courseAdjusts.push(created)
+    return ok(enrichCourseAdjust(created), '调课申请已提交，等待审批')
+  }
+
+  if (path === '/api/course-adjusts/my') {
+    const teacher = teachers.find((item) => item.teacherNo === currentUsername)
+    if (!teacher) {
+      return ok([])
+    }
+    const list = courseAdjusts
+      .filter((item) => item.teacherId === teacher.id)
+      .sort((a, b) => Number(b.id) - Number(a.id))
+      .map(enrichCourseAdjust)
+    return ok(list)
+  }
+
+  const cancelAdjust = pathParams(/^\/api\/course-adjusts\/(\d+)\/cancel$/)
+  if (cancelAdjust) {
+    const id = Number(cancelAdjust[1])
+    const teacher = teachers.find((item) => item.teacherNo === currentUsername)
+    const row = courseAdjusts.find((item) => item.id === id)
+    if (!row) {
+      return fail('调课申请不存在')
+    }
+    if (!teacher || row.teacherId !== teacher.id) {
+      return fail('只能撤销自己的调课申请')
+    }
+    if (row.status !== '待审核') {
+      return fail('仅待审核的申请可以撤销')
+    }
+    row.status = '已撤销'
+    return ok(enrichCourseAdjust(row), '已撤销申请')
   }
 
   /* ---------- 基础数据（下拉选择用，复数 RESTful） ---------- */

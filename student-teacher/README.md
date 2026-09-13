@@ -84,6 +84,8 @@ src
 | 登录 | `/login` | `POST /api/auth/login`、`POST /api/auth/logout` | ✅ 已实现 |
 | 首页 | `/home` | `GET /api/students?studentNo=`、`GET /api/teachers?teacherNo=`、`GET /api/terms` | ✅ 已实现 |
 | **教室申请** | `/classroom-apply` | `GET /api/classroom-applies/my`、`POST /api/classroom-applies`、`PUT /api/classroom-applies/{id}/cancel`、`GET /api/classrooms` | ✅ 已实现（学生/教师共用；撤回接口本轮补） |
+| **课表 / 教学任务** | `/timetable` | `GET /api/teaching-tasks?classId=`（学生）、`?teacherId=`（教师） | ✅ 已实现（学生/教师共用，按星期分组；未排课的单独归组） |
+| **我的调课** | `/teacher/course-adjust` | `GET /api/course-adjusts/my`、`POST /api/course-adjusts`、`PUT /api/course-adjusts/{id}/cancel` | ✅ 已实现（教师端；审批列表/通过/驳回归管理端） |
 | 我的成绩 | `/student/scores` | `GET /api/score/list-by-student/{studentId}` | ✅ 已实现（已带课程/考试/学分） |
 | 我的考勤 | `/student/attendance` | `GET /api/student-attendance/list-by-student` | ✅ 已实现 |
 | 补考重修 | `/student/retake` | `GET /api/retake/list-by-student/{id}`、`POST /api/retake/apply?type=`、`GET /api/courses` | ✅ 已实现（含补考/重修类型） |
@@ -111,20 +113,23 @@ src
 | 9 | 成绩保存校验收紧 | 分数必须 0~100、学生ID非空、考试必须存在 |
 | 10 | **补齐 `classroom_apply` 建表脚本** | 队友的教室申请代码齐全，但 `schema.sql` 里漏了这张表（一跑就报"表不存在"）；已补建表 + 种子数据 + `数据库设计.md` 登记 |
 | 11 | 教室申请接口修正 | ① 申请人改为**以当前登录人为准**（原来信任请求体，可冒名提交，且 `applicant` 为 NOT NULL 会插入失败）；② `PUT /{id}/approve` 补 `@PreAuthorize("hasRole('ADMIN')")`（原来任何登录用户都能审批）；③ approve/reject 增加"仅待审核可审批"校验（原来可重复审批）；④ `GET /api/classroom-applies?status=` 原来忽略 status 参数，已生效；⑤ 新增 `PUT /{id}/cancel` 撤回（仅本人、仅待审核） |
+| 12 | **新增表 `course_adjust`（调课申请）** | 教师提交「原时间 → 调整后时间」的调课申请，管理端审批；含 entity/mapper/service/controller、`schema.sql`、`data.sql` 种子数据与 `数据库设计.md` 登记 |
+| 13 | 调课申请接口 `/api/course-adjusts` | `POST` 提交（teacherId 由服务端按登录人解析，非教师拒绝）、`GET /my` 我的调课、`GET ?status=` 审批列表（`@PreAuthorize` ADMIN）、`PUT /{id}/approve|reject`（ADMIN + 仅待审核）、`PUT /{id}/cancel`（仅本人、仅待审核） |
+| 14 | **`base_teaching_task` 增加上课时间字段** | `weekday` / `start_section` / `end_section` / `classroom_id` / `weeks`，并给 `TeachingTaskController` 增加 `?classId=` 查询；返回体带课程/班级/教师/教室名称，课表页可直接渲染 |
 
 ## 仍待后端处理的缺口
 
 | # | 缺口 | 影响页面 | 建议 |
 | --- | --- | --- | --- |
-| 1 | **调课申请无表无接口** | 待做的调课页面 | main 上搜不到任何 `course_adjust` 相关代码；需先定表（申请人/原课程/原时间/新时间/原因/状态）+ 师生端提交与撤回、管理端审批 |
-| 2 | **写接口鉴权只做了一半** | 全部 | 机制已具备（`ROLE_*` authorities + `@EnableMethodSecurity`），但目前只有教室申请用到了 `@PreAuthorize`；成绩保存、教学日志、考勤录入等写接口仍对任何登录用户开放 |
-| 3 | **成绩录入无归属校验** | 成绩录入 | `GET /api/exams` 返回全部考试、保存只按 examId 校验 → 教师可给非本人任教的考试录改成绩。任课表已就绪，可用 `TeachingTaskService.teachesCourse` 校验 |
+| 1 | **写接口鉴权只做了一半** | 全部 | 机制已具备（`ROLE_*` authorities + `@EnableMethodSecurity`），教室申请/调课已加 `@PreAuthorize`，但成绩保存、教学日志、考勤录入等写接口仍对任何登录用户开放 |
+| 2 | **成绩录入无归属校验** | 成绩录入 | `GET /api/exams` 返回全部考试、保存只按 examId 校验 → 教师可给非本人任教的考试录改成绩。任课表已就绪，可用 `TeachingTaskService.teachesCourse` 校验 |
+| 3 | **调课缺少冲突校验** | 我的调课 | 提交时未校验"调整后时间该教师/班级/教室是否已有安排"（需要一张全校课表视图才能判），目前只做原时间≠新时间与必填校验 |
 | 4 | `student_attendance` 记录缺 `classId` | 学生考勤 | 周报表按 `classId` 统计，而录入时只有 `studentId/courseId/date/status`；合班课时口径可能不一致 |
 | 5 | `weekly-report` 字段契约未固化 | 学生考勤 | 后端返回 `List<Map>`，字段（`normal/late/absent/leave/total/rate`）需固化 |
 | 6 | 签到统计口径 | 我的签到 | `stat-by-date` 把"缺勤"计入"未签到"（已同时返回 `unchecked`），与 `list-by-date` 展示口径建议统一 |
 | 7 | 教学日志无修改/删除接口 | 教学日志 | 写错只能再提一条；且不校验班级/课程是否属于该教师 |
-| 8 | 响应契约仍是 `code:200` + `message` | 全部 | 师生端请求层已双契约兼容；`admin` 也已在 `793935f` 自行适配，后端统一会更干净 |
-| 9 | 课表/教学任务页面 | 待做的课表页 | 任课表已就绪，但**表里没有上课时间/周次/教室字段**，做不出"周一 3-4 节"的周课表；需先加字段，或先做"我的课程清单"版本 |
+| 8 | 响应契约仍是 `code:200` + `message` | 全部 | 师生端请求层已双契约兼容；`admin` 也已自行适配，后端统一会更干净 |
+| 9 | 管理端页面未跟上 | 管理端 | 教室申请审批、调课审批的**后端接口已就绪**（含 `@PreAuthorize` ADMIN），但 `admin` 工程对应页面仍走 mock，需要管理端同学切换到真实接口 |
 
 ## 与后端联调
 
@@ -139,9 +144,11 @@ src
 - 师生端：`vue-tsc -b` 零错误、`vite build` 通过；Mock 端到端冒烟 **19/19**（含新 RESTful 路径、教室申请提交/冲突拦截/撤回、学生与教师"我的申请"相互隔离）
 - 后端：`mvn -DskipTests compile` **BUILD SUCCESS**
 
-## 下一步（剩余的前端工作）
+## 下一步
 
-1. **调课申请**（师生端提交/我的 + 管理端审批）—— 需后端先定表，是唯一还没动的业务功能；
-2. **课表/我的教学任务** —— 任课表就绪，缺上课时间字段；
-3. **可选加分项**：教师端成绩导出 Excel、班级花名册、首页待办（现有接口即可拼）；
-4. **收尾**：关掉 mock 与真实后端跑一轮端到端联调，抽公共组件（三态卡/统计条），配 ESLint/Prettier。
+业务页面已全部落地（学生 5 + 教师 7 + 共用 2）。剩下的是纯加分项与工程化收尾：
+
+1. **教师端成绩导出 Excel**（需给师生端加 `xlsx` 依赖）与 **班级花名册**；
+2. **首页待办**：用现有接口（今日未签到 / 本周日志是否提交 / 近期待监考 / 待审核报名等）在前端拼装，无需新接口；
+3. **工程化**：抽公共组件（加载/错误/空三态、统计条），配 ESLint/Prettier；
+4. **联调收尾**：关掉 mock（`VITE_USE_MOCK=false`）与真实后端跑一轮端到端，把字段差异当场修掉。
