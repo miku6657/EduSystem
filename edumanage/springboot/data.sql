@@ -1,18 +1,22 @@
 -- ============================================================
 -- 教学过程管理系统 测试数据
 -- 目标库：eduSYSTEM（先执行 schema.sql 建库建表，再执行本脚本）
--- 登录账号（明文密码）：admin/123456、teacher01/123456、
---                       teacher02/123456、student01/123456
+-- 登录账号（密码统一为 123456，已按 BCrypt 存储，可直接登录）：
+--   admin / 123456        系统管理员
+--   T001  / 123456        教师·张伟（工号即登录名）
+--   2023005001 / 123456   学生·王小明（学号即登录名）
+-- 说明：登录名与 base_teacher.teacher_no / base_student.student_no 保持一致，
+--       师生端才能用登录名解析出 teacherId / studentId。
 -- ============================================================
 USE eduSYSTEM;
 
 -- ============ 一、系统基础数据 ============
 
 INSERT INTO sys_user (id, username, password, role, status) VALUES
-(1, 'admin',     '123456', 'ADMIN',   1),
-(2, 'teacher01', '123456', 'TEACHER', 1),
-(3, 'teacher02', '123456', 'TEACHER', 1),
-(4, 'student01', '123456', 'STUDENT', 1);
+(1, 'admin',      '$2a$10$r2Y7gE4Td8iMMAhE7vMqHuxdR1MBqSAadZmoInJSd5YMUs/RfBBxi', 'ADMIN',   1),
+(2, 'T001',       '$2a$10$r2Y7gE4Td8iMMAhE7vMqHuxdR1MBqSAadZmoInJSd5YMUs/RfBBxi', 'TEACHER', 1),
+(3, 'T002',       '$2a$10$r2Y7gE4Td8iMMAhE7vMqHuxdR1MBqSAadZmoInJSd5YMUs/RfBBxi', 'TEACHER', 1),
+(4, '2023005001', '$2a$10$r2Y7gE4Td8iMMAhE7vMqHuxdR1MBqSAadZmoInJSd5YMUs/RfBBxi', 'STUDENT', 1);
 
 INSERT INTO sys_role (id, role_name, role_code) VALUES
 (1, '管理员', 'ADMIN'),
@@ -86,6 +90,15 @@ INSERT INTO base_classroom (id, room_no, campus_id, type, area, capacity, status
 INSERT INTO base_term (id, name, start_date, end_date, status) VALUES
 (1, '2025-2026学年第二学期', '2026-03-01', '2026-07-10', 0),
 (2, '2026-2027学年第一学期', '2026-09-01', '2027-01-20', 1);
+
+-- 教学任务（任课关系，term_id=2 为当前学期）
+INSERT INTO base_teaching_task (id, teacher_id, course_id, class_id, term_id) VALUES
+(1, 1, 1, 1, 2),   -- 张伟：Java程序设计 - 软件技术2301班
+(2, 1, 1, 2, 2),   -- 张伟：Java程序设计 - 软件技术2302班
+(3, 2, 2, 1, 2),   -- 李娜：数据库原理 - 软件技术2301班
+(4, 3, 3, 1, 2),   -- 王强：Web前端开发 - 软件技术2301班
+(5, 3, 3, 2, 2),   -- 王强：Web前端开发 - 软件技术2302班
+(6, 4, 4, 3, 2);   -- 赵敏：会计基础 - 大数据与会计2301班
 
 -- ============ 三、考务数据 ============
 
