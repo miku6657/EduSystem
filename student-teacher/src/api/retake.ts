@@ -8,19 +8,27 @@ export interface ExamRetake {
   /** 已安排的补考场次；未安排为 null */
   examId?: number | null
   type: string
-  /** 展示用扩展字段（后端实体没有，Mock 会带） */
+  /** 展示用扩展字段（后端 Service 已关联填充） */
   courseName?: string
   studentName?: string
+  studentNo?: string
+  /** 已安排场次的考试名称（未安排时为 null） */
+  examName?: string
   createTime?: string
 }
 
 /**
- * 学生：申请重修 / 补考
- * 后端 POST /api/retake/apply?studentId&courseId（用 query 参数，不是 body）
- * 注意：后端 applyRetake 目前只会写入"重修"类型，补考入口待后端补（详见 README 缺口清单）。
+ * 学生：申请补考 / 重修
+ * 后端 POST /api/retake/apply?studentId&courseId&type（用 query 参数，不是 body）
+ *
+ * @param type 类型：补考 / 重修（不传时后端按"重修"处理）
  */
-export function applyRetake(studentId: number, courseId: number) {
-  return http.post<null>('/retake/apply', undefined, { studentId, courseId })
+export function applyRetake(studentId: number, courseId: number, type?: string) {
+  return http.post<null>('/retake/apply', undefined, {
+    studentId,
+    courseId,
+    ...(type ? { type } : {}),
+  })
 }
 
 /**

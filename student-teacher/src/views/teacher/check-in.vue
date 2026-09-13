@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
  * 教师 · 我的签到
- * 数据源：GET  /api/teacher-attendance/list-by-date?date（返回全校，前端筛本人）
- *         GET  /api/teacher-attendance/stat-by-date?date
- *         POST /api/teacher-attendance/check-in/{teacherId}（重复签到会失败）
+ * 数据源：GET  /api/teacher-attendance/list-by-teacher?teacherId&startDate&endDate
+ *          （本人近 7 天记录，1 次请求即可，无需逐日拉全校再筛本人）
+ *         GET  /api/teacher-attendance/stat-by-date?date（全校当日统计）
+ *         POST /api/teacher-attendance/check-in/{teacherId}（重复签到会返回失败）
  */
 import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
-import { checkIn, listByDate, statByDate } from '@/api/teacherAttendance'
+import { checkIn, listMyAttendance, statByDate } from '@/api/teacherAttendance'
 import type { TeacherAttendanceRecord, TeacherAttendanceStat } from '@/api/teacherAttendance'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
@@ -18,6 +19,8 @@ const userStore = useUserStore()
 /** 教师工号；0 = 业务身份未解析成功 */
 const teacherId = computed(() => userStore.businessId)
 const today = todayStr()
+/** 近 7 天区间起点 */
+const weekStart = addDays(today, -6)
 const submitting = ref(false)
 
 /** 最近 7 天中的某一天（status 为空表示当天无记录） */
@@ -27,36 +30,34 @@ interface DayAttendance {
   checkTime: string
 }
 
-/** 今日全校记录（后端无"按教师查"接口，只能取全校再筛本人） */
-const { data: todayRecords, loading, error, reload } = useAsyncData<TeacherAttendanceRecord[]>(
-  () => listByDate(today),
+/** 本人近 7 天签到记录 */
+const { data: myRecords, loading, error, reload } = useAsyncData<TeacherAttendanceRecord[]>(
+  () =>
+    teacherId.value
+      ? listMyAttendance(teacherId.value, weekStart, today)
+      : Promise.resolve([]),
   [],
 )
-/** 今日出勤统计 */
+/** 今日全校出勤统计 */
 const { data: stat, reload: reloadStat } = useAsyncData<TeacherAttendanceStat>(
   () => statByDate(today),
   {},
 )
-/** 最近 7 天：逐日请求后筛出本人记录（缺口见 README：无 list-by-teacher） */
-const {
-  data: recent,
-  loading: recentLoading,
-  error: recentError,
-  reload: reloadRecent,
-} = useAsyncData<DayAttendance[]>(async () => {
-  if (!teacherId.value) {
-    return []
-  }
-  const days = Array.from({ length: 7 }, (_, index) => addDays(today, -index))
-  const lists = await Promise.all(days.map((date) => listByDate(date)))
-  return days.map((date, index) => {
-    const mine = lists[index].find((item) => item.teacherId === teacherId.value)
-    return { date, status: mine?.status ?? '', checkTime: mine?.checkTime ?? '' }
-  })
-}, [])
 
-/** 今日本人签到记录：有记录即已签到 */
-const myToday = computed(() => todayRecords.value.find((item) => item.teacherId === teacherId.value))
+/** 今日本人签到记录 */
+const myToday = computed(() =>
+  myRecords.value.find((item) => item.attendanceDate === today),
+)
+
+/** 近 7 天逐日视图：缺失的日期显示"未签到" */
+const recent = computed<DayAttendance[]>(() => {
+  const map = new Map(myRecords.value.map((item) => [item.attendanceDate, item]))
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(today, -index)
+    const record = map.get(date)
+    return { date, status: record?.status ?? '', checkTime: record?.checkTime ?? '' }
+  })
+})
 
 /** 今日统计（后端字段缺失时用总数兜底） */
 const statView = computed(() => {
@@ -84,7 +85,6 @@ function timeText(checkTime?: string): string {
 function reloadAll() {
   reload()
   reloadStat()
-  reloadRecent()
 }
 
 async function onCheckIn() {
@@ -124,21 +124,24 @@ onMounted(reloadAll)
       <div class="st-card check__today">
         <div class="check__date">{{ today }}</div>
         <div class="check__status">
-          <van-tag v-if="myToday" size="large"
-            :type="ATTENDANCE_STATUS_TYPE[myToday?.status ?? ''] || 'primary'">
+          <van-tag
+            v-if="myToday"
+            size="large"
+            :type="ATTENDANCE_STATUS_TYPE[myToday?.status ?? ''] || 'primary'"
+          >
             {{ myToday.status }}
           </van-tag>
           <van-tag v-else size="large" type="warning">未签到</van-tag>
         </div>
         <div class="st-muted">
-          {{ myToday ? `签到时间 ${myToday.checkTime || '—'}` : '今日暂无签到记录' }}
+          {{ myToday ? `签到时间 ${timeText(myToday.checkTime) || myToday.checkTime || '—'}` : '今日暂无签到记录' }}
         </div>
         <van-button class="check__btn" round block type="primary" :loading="submitting" @click="onCheckIn">
           {{ checkButtonText }}
         </van-button>
       </div>
 
-      <div v-if="loading && todayRecords.length === 0" class="st-empty">
+      <div v-if="loading && myRecords.length === 0" class="st-empty">
         <van-loading vertical>加载中…</van-loading>
       </div>
 
@@ -146,36 +149,25 @@ onMounted(reloadAll)
         <van-button round type="primary" size="small" @click="reloadAll">重新加载</van-button>
       </van-empty>
 
-      <!-- 今日全校签到统计 -->
-      <div v-else class="st-card check__stat">
-        <div class="check__stat-item">
-          <div class="check__stat-value">{{ statView.total }}</div>
-          <div class="st-muted">教师总数</div>
-        </div>
-        <div class="check__stat-item">
-          <div class="check__stat-value">{{ statView.checked }}</div>
-          <div class="st-muted">已签到</div>
-        </div>
-        <div class="check__stat-item">
-          <div class="check__stat-value">{{ statView.unchecked }}</div>
-          <div class="st-muted">未签到</div>
-        </div>
-      </div>
-
-      <!-- 我最近 7 天的记录 -->
-      <div class="st-section-title">我最近 7 天的记录</div>
-
-      <div v-if="recentLoading" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="recentError" image="error" :description="recentError">
-        <van-button round type="primary" size="small" @click="reloadRecent">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="recent.length === 0" description="暂无签到记录" />
-
       <template v-else>
+        <!-- 今日全校签到统计 -->
+        <div class="st-card check__stat">
+          <div class="check__stat-item">
+            <div class="check__stat-value">{{ statView.total }}</div>
+            <div class="st-muted">教师总数</div>
+          </div>
+          <div class="check__stat-item">
+            <div class="check__stat-value">{{ statView.checked }}</div>
+            <div class="st-muted">已签到</div>
+          </div>
+          <div class="check__stat-item">
+            <div class="check__stat-value">{{ statView.unchecked }}</div>
+            <div class="st-muted">未签到</div>
+          </div>
+        </div>
+
+        <!-- 我最近 7 天的记录 -->
+        <div class="st-section-title">我最近 7 天的记录</div>
         <div v-for="row in recent" :key="row.date" class="st-card st-row">
           <span>{{ row.date }}</span>
           <span class="check__recent-right">

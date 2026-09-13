@@ -48,3 +48,21 @@ export async function listByDate(date: string): Promise<TeacherAttendanceRecord[
 export function statByDate(date: string) {
   return http.get<TeacherAttendanceStat>('/teacher-attendance/stat-by-date', { date })
 }
+
+/**
+ * 教师：查询本人在日期区间内的考勤记录（"我的签到"）
+ * 后端 GET /api/teacher-attendance/list-by-teacher?teacherId&startDate&endDate
+ * <p>注意：优先用这个接口，不要再逐日调 list-by-date 再筛本人（那是 7 次请求）。</p>
+ */
+export async function listMyAttendance(
+  teacherId: number,
+  startDate: string,
+  endDate: string,
+): Promise<TeacherAttendanceRecord[]> {
+  const data = await http.get<unknown>('/teacher-attendance/list-by-teacher', {
+    teacherId,
+    startDate,
+    endDate,
+  })
+  return normalizeList<TeacherAttendanceRecord>(data)
+}

@@ -68,6 +68,27 @@ function between(value: string, start: string, end: string): boolean {
   return value >= start && value <= end
 }
 
+/**
+ * 自己解析 URL 查询串。
+ * 不要依赖插件注入的 ctx.query —— 实测在 POST 请求下它可能为空，
+ * 而前端（axios）无论 GET/POST 都把参数放在 URL 上，Spring 也是从 URL 读 @RequestParam。
+ */
+function parseQuery(rawUrl: string): MockRow {
+  const index = rawUrl.indexOf('?')
+  if (index < 0) {
+    return {}
+  }
+  const result: MockRow = {}
+  for (const pair of rawUrl.slice(index + 1).split('&')) {
+    if (!pair) {
+      continue
+    }
+    const [rawKey, rawValue = ''] = pair.split('=')
+    result[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue.replace(/\+/g, ' '))
+  }
+  return result
+}
+
 function paged<T>(list: T[], query: MockRow) {
   const page = Number(query.page ?? query.pageNo ?? 1)
   const pageSize = Number(query.pageSize ?? 10)
@@ -83,32 +104,36 @@ const classes: MockRow[] = [
 ]
 
 const students: MockRow[] = [
-  { id: 1, studentNo: '2023005001', name: '王小明', gender: '男', classId: 1, className: '计算机2301班', majorName: '计算机科学与技术', phone: '13900000001', status: '在读' },
-  { id: 2, studentNo: '2023005002', name: '陈红', gender: '女', classId: 1, className: '计算机2301班', majorName: '计算机科学与技术', phone: '13900000002', status: '在读' },
-  { id: 3, studentNo: '2023005003', name: '刘洋', gender: '男', classId: 1, className: '计算机2301班', majorName: '计算机科学与技术', phone: '13900000003', status: '在读' },
-  { id: 4, studentNo: '2023005004', name: '张雪', gender: '女', classId: 1, className: '计算机2301班', majorName: '计算机科学与技术', phone: '13900000004', status: '在读' },
-  { id: 5, studentNo: '2023005005', name: '孙磊', gender: '男', classId: 2, className: '软件工程2302班', majorName: '软件工程', phone: '13900000005', status: '在读' },
-  { id: 6, studentNo: '2023005006', name: '周婷', gender: '女', classId: 2, className: '软件工程2302班', majorName: '软件工程', phone: '13900000006', status: '在读' },
+  { id: 1, studentNo: '2023005001', name: '王小明', gender: '男', classId: 1, className: '软件技术2301班', majorName: '软件技术', phone: '13900000001', status: '在读' },
+  { id: 2, studentNo: '2023005002', name: '陈红', gender: '女', classId: 1, className: '软件技术2301班', majorName: '软件技术', phone: '13900000002', status: '在读' },
+  { id: 3, studentNo: '2023005003', name: '刘洋', gender: '男', classId: 1, className: '软件技术2301班', majorName: '软件技术', phone: '13900000003', status: '在读' },
+  { id: 4, studentNo: '2023005004', name: '张雪', gender: '女', classId: 1, className: '软件技术2301班', majorName: '软件技术', phone: '13900000004', status: '在读' },
+  { id: 5, studentNo: '2023005005', name: '孙磊', gender: '男', classId: 2, className: '软件技术2302班', majorName: '软件技术', phone: '13900000005', status: '在读' },
+  { id: 6, studentNo: '2023005006', name: '周婷', gender: '女', classId: 2, className: '软件技术2302班', majorName: '软件技术', phone: '13900000006', status: '在读' },
+  { id: 7, studentNo: '2023005007', name: '吴刚', gender: '男', classId: 3, className: '大数据与会计2301班', majorName: '大数据与会计', phone: '13900000007', status: '在读' },
+  { id: 8, studentNo: '2023005008', name: '郑爽', gender: '女', classId: 3, className: '大数据与会计2301班', majorName: '大数据与会计', phone: '13900000008', status: '在读' },
 ]
 
+/** 教师（与 data.sql 的 base_teacher 一致，工号即登录名） */
 const teachers: MockRow[] = [
-  { id: 1, teacherNo: 'T1001', name: '张伟', gender: '男', departmentId: 1, departmentName: '计算机系', title: '副教授', teacherType: '专职', status: '在职' },
-  { id: 2, teacherNo: 'T1002', name: '王丽华', gender: '女', departmentId: 1, departmentName: '计算机系', title: '讲师', teacherType: '专职', status: '在职' },
-  { id: 3, teacherNo: 'T1003', name: '李思远', gender: '男', departmentId: 2, departmentName: '软件工程系', title: '教授', teacherType: '专职', status: '在职' },
-  { id: 4, teacherNo: 'T1004', name: '赵明', gender: '男', departmentId: 2, departmentName: '软件工程系', title: '助教', teacherType: '兼职', status: '在职' },
+  { id: 1, teacherNo: 'T001', name: '张伟', gender: '男', departmentId: 1, departmentName: '信息工程系', title: '副教授', teacherType: '专职', status: '在职' },
+  { id: 2, teacherNo: 'T002', name: '李娜', gender: '女', departmentId: 1, departmentName: '信息工程系', title: '讲师', teacherType: '专职', status: '在职' },
+  { id: 3, teacherNo: 'T003', name: '王强', gender: '男', departmentId: 1, departmentName: '信息工程系', title: '教授', teacherType: '校内兼职', status: '在职' },
+  { id: 4, teacherNo: 'T004', name: '赵敏', gender: '女', departmentId: 2, departmentName: '经济管理系', title: '讲师', teacherType: '专职', status: '在职' },
 ]
 
+/** 课程（与 data.sql 的 base_course 一致） */
 const courses: MockRow[] = [
-  { id: 1, courseCode: 'C001', name: '高等数学（上）', credit: 4, type: '必修', teachingGroupId: 1 },
-  { id: 2, courseCode: 'C002', name: '数据结构', credit: 3.5, type: '必修', teachingGroupId: 1 },
-  { id: 3, courseCode: 'C003', name: '数据库原理', credit: 3, type: '必修', teachingGroupId: 2 },
-  { id: 4, courseCode: 'C004', name: 'Web前端开发', credit: 2.5, type: '选修', teachingGroupId: 2 },
+  { id: 1, courseCode: 'C001', name: 'Java程序设计', credit: 4, type: '考试', teachingGroupId: 1 },
+  { id: 2, courseCode: 'C002', name: '数据库原理', credit: 3.5, type: '考试', teachingGroupId: 1 },
+  { id: 3, courseCode: 'C003', name: 'Web前端开发', credit: 3, type: '考查', teachingGroupId: 2 },
+  { id: 4, courseCode: 'C004', name: '会计基础', credit: 3, type: '考试', teachingGroupId: 3 },
 ]
 
 const exams: MockRow[] = [
-  { id: 1, name: '高等数学（上）期末考试', courseId: 1, termId: 1, examType: '期末', examDate: dayOffset(7), startTime: '09:00', endTime: '11:00', status: '已安排', courseName: '高等数学（上）' },
-  { id: 2, name: '数据结构期末考试', courseId: 2, termId: 1, examType: '期末', examDate: dayOffset(8), startTime: '09:00', endTime: '11:00', status: '已安排', courseName: '数据结构' },
-  { id: 3, name: '数据库原理期末考试', courseId: 3, termId: 1, examType: '期末', examDate: dayOffset(9), startTime: '14:00', endTime: '16:00', status: '已安排', courseName: '数据库原理' },
+  { id: 1, name: 'Java程序设计期末考试', courseId: 1, termId: 2, examType: '期末', examDate: dayOffset(7), startTime: '09:00', endTime: '11:00', status: '已安排', courseName: 'Java程序设计' },
+  { id: 2, name: '数据库原理期末考试', courseId: 2, termId: 2, examType: '期末', examDate: dayOffset(8), startTime: '09:00', endTime: '11:00', status: '已安排', courseName: '数据库原理' },
+  { id: 3, name: 'Web前端开发期末考试', courseId: 3, termId: 2, examType: '期末', examDate: dayOffset(9), startTime: '14:00', endTime: '16:00', status: '已安排', courseName: 'Web前端开发' },
 ]
 
 /** 成绩（exam_score；status：NORMAL/ABSENT/DELAY/CHEAT） */
@@ -123,13 +148,14 @@ const scores: MockRow[] = [
   { id: 8, examId: 2, studentId: 4, score: null, status: 'ABSENT' },
 ]
 
-/** 教师任教关系（缺口：后端没有任课表，这里仅用于 Mock 演示） */
+/** 教学任务（任课关系）——后端已新增 base_teaching_task 表，这里与其种子数据保持一致 */
 const teacherClasses: MockRow[] = [
   { teacherId: 1, classId: 1 },
+  { teacherId: 1, classId: 2 },
   { teacherId: 2, classId: 1 },
-  { teacherId: 2, classId: 2 },
+  { teacherId: 3, classId: 1 },
   { teacherId: 3, classId: 2 },
-  { teacherId: 4, classId: 1 },
+  { teacherId: 4, classId: 3 },
 ]
 
 const teacherCourses: MockRow[] = [
@@ -158,11 +184,11 @@ const teacherAttendance: MockRow[] = [
   { id: 3, teacherId: 3, attendanceDate: dayOffset(-1), status: '正常', checkTime: `${dayOffset(-1)} 07:45` },
 ]
 
-/** 教学日志 */
+/** 教学日志（内容与课程名保持口径一致） */
 const teachingLogs: MockRow[] = [
-  { id: 1, teacherId: 1, courseId: 1, classId: 1, teachingDate: dayOffset(-1), content: '极限与连续：讲解极限定义、两个重要极限及例题演练。', homework: '习题 1-3 第 1、3、5 题' },
-  { id: 2, teacherId: 1, courseId: 1, classId: 1, teachingDate: dayOffset(-2), content: '函数与数列：复习函数性质，引入数列极限概念。', homework: '习题 1-2 全部' },
-  { id: 3, teacherId: 2, courseId: 2, classId: 1, teachingDate: dayOffset(-1), content: '线性表：顺序存储结构与链式存储结构对比。', homework: '实现单链表插入与删除' },
+  { id: 1, teacherId: 1, courseId: 1, classId: 1, teachingDate: dayOffset(-1), content: '面向对象基础：类与对象、封装继承多态的概念与代码演示。', homework: '实现一个学生类并完成封装练习' },
+  { id: 2, teacherId: 1, courseId: 1, classId: 1, teachingDate: dayOffset(-2), content: 'Java 开发环境与语法基础：JDK 安装、变量、运算符与流程控制。', homework: '完成 3 道流程控制编程题' },
+  { id: 3, teacherId: 2, courseId: 2, classId: 1, teachingDate: dayOffset(-1), content: '关系模型与 SQL 基础：建表语句、主外键约束与单表查询。', homework: '为学生表与成绩表编写建表语句' },
 ]
 
 /** 补考重修 */
@@ -199,11 +225,11 @@ const examMonitors: MockRow[] = [
   { id: 5, examId: 3, teacherId: 1, monitorRole: 'SUB' },
 ]
 
-/** 考场（用于监考安排展示考场名） */
+/** 考场（对应 data.sql 的 base_classroom.room_no） */
 const examRooms: MockRow[] = [
-  { examId: 1, roomName: '第一教学楼 101' },
-  { examId: 2, roomName: '第二教学楼 301' },
-  { examId: 3, roomName: '实验楼 A202 机房' },
+  { examId: 1, roomName: '教学楼A101' },
+  { examId: 2, roomName: '教学楼A102' },
+  { examId: 3, roomName: '实训楼B201机房' },
 ]
 
 let sequence = 1000
@@ -274,8 +300,10 @@ function enrichRetake(row: MockRow): MockRow {
   return {
     ...row,
     courseName: courseOf(row.courseId)?.name ?? `课程#${row.courseId}`,
+    examName: row.examId ? (examOf(row.examId)?.name ?? null) : null,
     studentName: student?.name ?? null,
     studentNo: student?.studentNo ?? null,
+    createTime: row.createTime ?? null,
   }
 }
 
@@ -330,7 +358,7 @@ function resolveStudentAccount(username: string): MockRow | undefined {
 
 /** 教师登录名 → 工号（支持"工号"与 teacher01 这类别名） */
 function resolveTeacherAccount(username: string): MockRow | undefined {
-  const alias: Record<string, string> = { teacher01: 'T1001', teacher02: 'T1002', teacher03: 'T1003', teacher04: 'T1004' }
+  const alias: Record<string, string> = { teacher01: 'T001', teacher02: 'T002', teacher03: 'T003', teacher04: 'T004' }
   const teacherNo = alias[username] ?? username
   return teachers.find((item) => item.teacherNo === teacherNo)
 }
@@ -343,7 +371,8 @@ const CURRENT_TERM = '2026-2027学年第一学期'
 function handleApi(ctx: MockContext) {
   const rawUrl = String(ctx.url ?? '')
   const path = rawUrl.split('?')[0]
-  const query: MockRow = ctx.query ?? {}
+  // 以 URL 上的查询串为准，插件注入的 query 作为兜底
+  const query: MockRow = { ...(ctx.query ?? {}), ...parseQuery(rawUrl) }
   const body: MockRow = ctx.body ?? {}
 
   /** 便捷取路径参数 */
@@ -385,7 +414,7 @@ function handleApi(ctx: MockContext) {
         user: { id: teacher.id, username: teacher.teacherNo, role: 'TEACHER' },
       })
     }
-    return fail('账号不存在（演示账号：2023005001 或 T1001，密码 123456）')
+    return fail('账号不存在（演示账号：学生 2023005001 / 教师 T001，密码 123456）')
   }
 
   if (path === '/api/auth/logout') {
@@ -606,6 +635,19 @@ function handleApi(ctx: MockContext) {
     return ok(list)
   }
 
+  // 教师本人的考勤区间查询（与后端 /api/teacher-attendance/list-by-teacher 对齐）
+  if (path === '/api/teacher-attendance/list-by-teacher') {
+    const teacherId = Number(query.teacherId ?? 0)
+    const startDate = String(query.startDate ?? '')
+    const endDate = String(query.endDate ?? '')
+    const list = teacherAttendance
+      .filter((item) => item.teacherId === teacherId)
+      .filter((item) => !startDate || !endDate || between(item.attendanceDate, startDate, endDate))
+      .sort((a, b) => String(b.attendanceDate).localeCompare(String(a.attendanceDate)))
+      .map((item) => ({ ...item, teacherName: teacherOf(item.teacherId)?.name ?? null }))
+    return ok(list)
+  }
+
   if (path === '/api/teacher-attendance/stat-by-date') {
     const date = String(query.date ?? dayOffset(0))
     const checked = teacherAttendance.filter(
@@ -672,14 +714,19 @@ function handleApi(ctx: MockContext) {
     if (!studentId || !courseId) {
       return fail('请选择要申请的课程')
     }
+    // 类型：补考 / 重修（与后端 applyRetake 的 type 参数一致，缺省按重修）
+    const type = String(query.type ?? body.type ?? '重修')
+    if (type !== '补考' && type !== '重修') {
+      return fail('申请类型只能是补考或重修')
+    }
     const duplicated = retakes.find(
       (item) => item.studentId === studentId && item.courseId === courseId && item.examId === null,
     )
     if (duplicated) {
       return fail('该课程已有待安排的申请，请勿重复提交')
     }
-    retakes.push({ id: nextId(), studentId, courseId, examId: null, type: '重修' })
-    return ok(null, '申请已提交，等待教务安排')
+    retakes.push({ id: nextId(), studentId, courseId, examId: null, type })
+    return ok(null, `已提交${type}申请，等待教务安排`)
   }
 
   const retakeByStudent = pathParams(/^\/api\/retake\/list-by-student\/(\d+)$/)

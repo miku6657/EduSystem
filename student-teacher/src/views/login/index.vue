@@ -18,7 +18,7 @@ const loading = ref(false)
 /** 演示账号（由 mock 提供）：学生用学号登录、教师用工号登录 */
 const demoAccounts = [
   { label: '学生演示账号', username: '2023005001', password: '123456' },
-  { label: '教师演示账号', username: 'T1001', password: '123456' },
+  { label: '教师演示账号', username: 'T001', password: '123456' },
 ]
 
 function fillDemo(account: { username: string; password: string }) {

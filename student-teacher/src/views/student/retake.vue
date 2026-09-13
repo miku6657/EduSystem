@@ -2,7 +2,7 @@
 /**
  * 学生 · 补考重修
  * 数据源：GET /api/retake/list-by-student/{studentId}
- * 申请：POST /api/retake/apply?studentId&courseId（后端目前只写入"重修"类型）
+ * 申请：POST /api/retake/apply?studentId&courseId&type（type：补考 / 重修）
  */
 import { computed, onMounted, ref } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
@@ -12,6 +12,7 @@ import { pageCourses } from '@/api/base'
 import type { Course } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import { RETAKE_TYPE_OPTIONS } from '@/constants/dict'
 
 const userStore = useUserStore()
 const refreshing = ref(false)
@@ -19,6 +20,9 @@ const refreshing = ref(false)
 const showApply = ref(false)
 const submitting = ref(false)
 const selectedCourseId = ref<number | undefined>(undefined)
+/** 申请类型：补考 / 重修（提交时传给后端） */
+const selectedType = ref<string>('重修')
+const typeOptions = RETAKE_TYPE_OPTIONS
 const courseOptions = ref<Course[]>([])
 const coursesLoading = ref(false)
 
@@ -43,8 +47,11 @@ function typeTagOf(type: string): 'warning' | 'primary' {
   return type === '补考' ? 'warning' : 'primary'
 }
 
-/** 场次文案：已安排显示场次编号，否则等待教务安排 */
+/** 场次文案：后端已带 examName 时优先显示考试名称 */
 function examTextOf(row: ExamRetake): string {
+  if (row.examName) {
+    return `已安排：${row.examName}`
+  }
   return row.examId === null || row.examId === undefined ? '待教务安排' : `已安排场次 #${row.examId}`
 }
 
@@ -70,6 +77,7 @@ function openApply() {
     return
   }
   selectedCourseId.value = undefined
+  selectedType.value = '重修'
   showApply.value = true
   void loadCourses()
 }
@@ -90,14 +98,14 @@ async function onSubmit() {
   try {
     await showConfirmDialog({
       title: '确认申请',
-      message: `确定申请「${courseName}」的补考 / 重修吗？提交后由教务安排考试场次。`,
+      message: `确定申请「${courseName}」的${selectedType.value}吗？提交后由教务安排考试场次。`,
     })
   } catch {
     return // 用户取消
   }
   submitting.value = true
   try {
-    await applyRetake(studentId, courseId)
+    await applyRetake(studentId, courseId, selectedType.value)
     showToast('申请已提交')
     showApply.value = false
     await reload()
@@ -130,7 +138,7 @@ onMounted(reload)
     </div>
 
     <van-button class="retake__actions" round block type="primary" @click="openApply">
-      申请重修 / 补考
+      申请补考 / 重修
     </van-button>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -160,8 +168,16 @@ onMounted(reload)
     <!-- 申请弹层：van-form + 课程单选 -->
     <van-popup v-model:show="showApply" position="bottom" round>
       <van-form @submit="onSubmit">
-        <div class="retake__popup-title">申请重修 / 补考</div>
+        <div class="retake__popup-title">申请补考 / 重修</div>
 
+        <div class="retake__field-label">申请类型</div>
+        <van-radio-group v-model="selectedType" direction="horizontal" class="retake__types">
+          <van-radio v-for="option in typeOptions" :key="option.value" :name="option.value">
+            {{ option.text }}
+          </van-radio>
+        </van-radio-group>
+
+        <div class="retake__field-label">选择课程</div>
         <div v-if="coursesLoading" class="st-empty">
           <van-loading vertical>课程加载中…</van-loading>
         </div>
@@ -183,7 +199,7 @@ onMounted(reload)
 
     <!-- 静态说明 -->
     <div class="st-card retake__tip st-muted">
-      说明：申请提交后由教务统一安排补考 / 重修场次，安排完成后列表会显示场次编号；同一门课程存在"待安排"申请时不能重复提交，如需取消请联系教务处。
+      说明：申请提交后由教务统一安排补考 / 重修场次，安排完成后会显示考试名称；同一门课程存在"待安排"申请时不能重复提交，且课程成绩已及格时不允许申请。
     </div>
   </div>
 </template>
@@ -205,6 +221,10 @@ onMounted(reload)
 .retake__meta { margin-top: 6px; }
 
 .retake__popup-title { padding: 14px 16px 6px; font-size: 16px; font-weight: 600; text-align: center; }
+
+.retake__field-label { padding: 8px 16px 4px; font-size: 13px; color: var(--st-text-light); }
+
+.retake__types { padding: 0 16px 6px; }
 
 .retake__courses { max-height: 45vh; padding: 4px 16px; overflow-y: auto; }
 

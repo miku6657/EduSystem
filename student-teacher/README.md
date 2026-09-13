@@ -13,13 +13,14 @@ npm install
 npm run dev        # http://localhost:5174
 ```
 
-演示账号（由本地 Mock 提供，密码均为 `123456`）：
+演示账号（本地 Mock 与后端 `data.sql` 种子数据一致，密码均为 `123456`）：
 
 | 角色 | 账号 | 说明 |
 | --- | --- | --- |
-| 学生 | `2023005001` | 王小明（也可用 `student01`） |
-| 教师 | `T1001` | 张伟（也可用 `teacher01`） |
+| 学生 | `2023005001` | 王小明（登录名即学号，也可用 `student01`） |
+| 教师 | `T001` | 张伟（登录名即工号，也可用 `teacher01`） |
 
+登录名与 `base_student.student_no` / `base_teacher.teacher_no` 一致，师生端才能用登录名解析出 `studentId` / `teacherId`。
 `admin` 账号会被拒绝并提示使用后台管理端登录。
 
 常用命令：
@@ -79,53 +80,58 @@ src
 | 页面 | 路由 | 主要接口 | 后端状态 |
 | --- | --- | --- | --- |
 | 登录 | `/login` | `POST /api/auth/login` | ✅ 已实现 |
-| 首页 | `/home` | `GET /api/student\|teacher/by-no/{no}`、`GET /api/term/current` | ✅ 学生已实现 / ⚠️ 教师 by-no 缺 |
-| 我的成绩 | `/student/scores` | `GET /api/score/list-by-student/{studentId}` | ✅ 已实现 |
+| 首页 | `/home` | `GET /api/student\|teacher/by-no/{no}`、`GET /api/term/current` | ✅ 已实现 |
+| 我的成绩 | `/student/scores` | `GET /api/score/list-by-student/{studentId}` | ✅ 已实现（已带课程/考试/学分） |
 | 我的考勤 | `/student/attendance` | `GET /api/student-attendance/list-by-student` | ✅ 已实现 |
-| 补考重修 | `/student/retake` | `GET /api/retake/list-by-student/{id}`、`POST /api/retake/apply`、`GET /api/course/page` | ✅ 已实现（补考类型见缺口 7） |
-| 专升本报名 | `/student/upgrade` | `POST /api/upgrade-apply/apply`、`GET /api/upgrade-apply/my/list` | ⚠️ 提交已实现，我的报名缺 |
+| 补考重修 | `/student/retake` | `GET /api/retake/list-by-student/{id}`、`POST /api/retake/apply?type=`、`GET /api/course/page` | ✅ 已实现（含补考/重修类型） |
+| 专升本报名 | `/student/upgrade` | `POST /api/upgrade-apply/apply`、`GET /api/upgrade-apply/my/list` | ✅ 已实现 |
 | 毕业资格 | `/student/graduation` | `GET /api/graduate-check/by-student/{studentId}` | ✅ 已实现 |
 | 教学日志 | `/teacher/teaching-log` | `POST /api/teaching-log`、`GET /api/teaching-log/list-by-teacher-week` | ✅ 已实现 |
-| 我的签到 | `/teacher/check-in` | `POST /api/teacher-attendance/check-in/{teacherId}`、`/list-by-date`、`/stat-by-date` | ✅ 已实现 |
+| 我的签到 | `/teacher/check-in` | `POST /api/teacher-attendance/check-in/{teacherId}`、`GET /api/teacher-attendance/list-by-teacher`、`/stat-by-date` | ✅ 已实现（1 次请求取本人 7 天） |
 | 学生考勤 | `/teacher/student-attendance` | `POST /api/student-attendance/record`、`GET /api/student-attendance/weekly-report`、`GET /api/student/list-by-class/{id}` | ✅ 已实现 |
-| 成绩录入 | `/teacher/scores` | `GET /api/score/page-by-exam`、`POST /api/score/save/{examId}`、`GET /api/score/stat/{examId}`、`GET /api/exam/page` | ✅ 已实现（学生姓名见缺口 6） |
-| 考核方式申报 | `/teacher/method-apply` | `POST /api/exam-apply/apply`、`GET /api/exam-apply/my/list` | ⚠️ 提交已实现，我的申报缺 |
-| 我的监考 | `/teacher/invigilation` | `GET /api/exam-monitor/list-by-teacher/{teacherId}` | ✅ 已实现（考试信息见缺口 6） |
+| 成绩录入 | `/teacher/scores` | `GET /api/score/page-by-exam`、`POST /api/score/save/{examId}`、`GET /api/score/stat/{examId}`、`GET /api/exam/page` | ✅ 已实现（已带学生姓名） |
+| 考核方式申报 | `/teacher/method-apply` | `POST /api/exam-apply/apply`、`GET /api/exam-apply/my/list` | ✅ 已实现 |
+| 我的监考 | `/teacher/invigilation` | `GET /api/exam-monitor/list-by-teacher/{teacherId}` | ✅ 已实现（已带考试/考场信息） |
 
-## 待后端补的缺口清单
+## 后端配套改动（本轮已补齐）
 
-> Mock 已按下列形态提供数据，页面可正常演示；接真实后端前需要后端补齐或确认替代方案。
+| # | 内容 | 说明 |
+| --- | --- | --- |
+| 1 | 新增表 `base_teaching_task`（任课关系） | 教师-课程-班级-学期，含实体/Mapper/Service/Controller 与 `schema.sql`、`data.sql` 种子数据 |
+| 2 | `GET /api/teacher/by-no/{teacherNo}` | 工号 → 教师，师生端据此解析当前登录人的 `teacherId` |
+| 3 | `GET /api/teacher/my-classes`、`/my-courses` | 基于任课表返回教师任教班级/课程 |
+| 4 | `GET /api/upgrade-apply/my/list`、`GET /api/exam-apply/my/list` | 师生端"我的报名 / 我的申报" |
+| 5 | `POST /api/retake/apply` 支持 `type` | 补考 / 重修均可用（缺省按重修） |
+| 6 | 列表补齐展示字段 | `exam_score` 带学生姓名/学号/考试/课程/学分，`exam_monitor` 带考试名/时间/考场/教师名，`exam_retake` 带课程名/考试名，`upgrade_apply` 带学生姓名，`exam_apply` 带课程名/教师名（`@TableField(exist=false)`，Service 批量填充，无 N+1） |
+| 7 | `POST /api/auth/logout` | 语义化占位接口，前端统一调用 |
+| 8 | `GET /api/teacher-attendance/list-by-teacher` | 本人区间考勤，替代"逐日拉全校再筛本人" |
+| 9 | `data.sql` 密码改为 BCrypt 哈希 | 种子账号由"登不进去"变为可直接登录；登录名与学号/工号对齐 |
+| 10 | 成绩保存校验收紧 | 分数必须 0~100、学生ID非空、考试必须存在 |
+
+## 仍待后端处理的缺口
 
 | # | 缺口 | 影响页面 | 建议 |
 | --- | --- | --- | --- |
-| 1 | `GET /api/teacher/by-no/{teacherNo}` —— 工号 → teacherId | 首页、全部教师页 | 教师登录名是工号，但没有解析接口，导致 teacherId 拿不到，所有教师页无法取数 |
-| 2 | **没有"任课/教学任务"表** | 学生"我的课表"、教师"我的教学任务" | 表结构缺失，这两个页面目前**没有排期**，需先定表 |
-| 3 | `GET /api/teacher/my-classes`、`GET /api/teacher/my-courses` | 学生考勤、教学日志、考核方式申报 | 现由 Mock 提供；后端应基于任课表返回 |
-| 4 | `GET /api/upgrade-apply/my/list?studentId` | 专升本报名 | 后端只有 `/report-list`（管理端报表）与 `/{id}` |
-| 5 | `GET /api/exam-apply/my/list?teacherId` | 考核方式申报 | 后端只有 `/export-list` 与 `/{id}` |
-| 6 | 成绩/监考列表缺展示字段 | 成绩录入、我的监考 | `exam_score` 无学生姓名、`exam_monitor` 无考试信息，建议后端返回 VO 带 `studentName`/`examName`/`roomName`，否则前端只能显示 ID |
-| 7 | 补考申请入口 | 补考重修 | `ExamRetakeService.TYPE_MAKEUP` 定义了却未使用，`applyRetake` 只写"重修"，**补考申请实际不可用** |
-| 8 | `POST /api/auth/logout` | 退出登录 | 后端无此接口，师生端退出仅清本地（已容错） |
-| 9 | 教师"我的签到记录" | 我的签到 | 后端只有 `list-by-date`（返回全校），前端逐日筛选；若教师多可考虑加 `list-by-teacher` |
-| 10 | **成绩录入无归属校验（越权风险）** | 成绩录入 | `GET /api/exam/page` 返回全部考试、`POST /api/score/save/{examId}` 只按 examId 校验 → **任何教师都能给任意考试录入/修改成绩**。建议补"我的考试"接口 + 保存时校验任课关系 |
-| 11 | `student_attendance` 记录缺 `classId` | 学生考勤 | 提交时只有 `studentId/courseId/date/status`，而周报表按 `classId` 统计；合班课时两端口径可能不一致，建议记录带 `classId` 或后端校验归属 |
-| 12 | `weekly-report` 字段契约未固化 | 学生考勤 | 后端返回 `List<Map>`，字段（`normal/late/absent/leave/total/rate`）目前只在前端 Mock 中约定，需后端固化，否则前端只能继续兜底 |
-| 13 | 签到统计口径不一致 | 我的签到 | `stat-by-date` 把"缺勤"记录计入"未签到"，而 `list-by-date` 会展示该状态；建议统一（前端已用按钮文案"今日已记录缺勤"做区分） |
-| 14 | 教学日志无修改/删除接口 | 教学日志 | 写错只能再提一条；且 `POST /api/teaching-log` 不校验班级/课程是否属于该教师 |
+| 1 | **成绩录入无归属校验（越权风险）** | 成绩录入 | `GET /api/exam/page` 返回全部考试、保存只按 examId 校验 → 任何教师都能给任意考试录改成绩。任课表已就绪，建议补"我的考试"接口 + 保存时用 `TeachingTaskService.teachesCourse` 校验（**需配合角色鉴权一起做**） |
+| 2 | `student_attendance` 记录缺 `classId` | 学生考勤 | 提交时只有 `studentId/courseId/date/status`，而周报表按 `classId` 统计；合班课时两端口径可能不一致 |
+| 3 | `weekly-report` 字段契约未固化 | 学生考勤 | 后端返回 `List<Map>`，字段（`normal/late/absent/leave/total/rate`）需固化，否则前端只能继续兜底 |
+| 4 | 签到统计口径 | 我的签到 | `stat-by-date` 把"缺勤"计入"未签到"（已同时返回 `unchecked` 字段），与 `list-by-date` 展示口径建议统一 |
+| 5 | 教学日志无修改/删除接口 | 教学日志 | 写错只能再提一条；且 `POST /api/teaching-log` 不校验班级/课程是否属于该教师 |
+| 6 | **后端无角色权限模型** | 全部 | 任何登录用户可调全部接口（学生 token 能调管理端增删改）。需补 `SimpleGrantedAuthority` + 路由级鉴权，师生端才能安全上线 |
+| 7 | **响应契约仍是 `code:200` + `message`** | 全部 | 师生端请求层已双契约兼容，但 `admin` 工程只认 `code:0` + `msg`，建议后端统一 |
 
 ## 与后端联调
 
-1. 启动后端（默认 `http://localhost:8080`，数据库 `eduSYSTEM` 需先手工导入 `edumanage/springboot/schema.sql` 与 `data.sql`）。
-2. 把 `.env.development` 的 `VITE_USE_MOCK` 改为 `false`，`/api` 请求即经 Vite 代理转发到后端。
-3. **注意两个前置问题**（已在审计中确认，未修）：
-   - `data.sql` 里 `sys_user.password` 是明文 `123456`，而 `AuthController` 用 BCrypt 校验 → **种子账号登录会失败**，需先把密码换成 BCrypt 哈希；
-   - 后端无角色权限模型（任何登录用户可调全部接口）→ 师生端上线前必须补，否则学生 token 能调管理端接口。
+1. 用**当前 `main` 分支的脚本**建库并导入数据：`schema.sql`（含新表 `base_teaching_task`）→ `data.sql`（密码已是 BCrypt、登录名即学号/工号）。
+2. 启动后端（默认 `http://localhost:8080`）。
+3. 把 `.env.development` 的 `VITE_USE_MOCK` 改为 `false`，`/api` 请求即经 Vite 代理转发到后端。
+4. 用 `2023005001 / 123456`（学生）或 `T001 / 123456`（教师）登录，与后端种子账号一致。
 
 ## 验证状态
 
-- `vite build`：✅ 通过
-- `vue-tsc -b`（含 `noUnusedLocals` / `noUnusedParameters` / `erasableSyntaxOnly` 严格项）：✅ 无错误
+- 师生端：`vue-tsc -b` 零错误、`vite build` 通过、Mock 读链路 HTTP 冒烟 11/11、写链路 19/19
+- 后端：本次改动后 `mvn -DskipTests compile` **BUILD SUCCESS**（146 个源文件）
 
 ## 第二批（待排期）
 
-教室申请（申请 / 我的申请 / 取消）、调课申请、课表与教学任务、首页待办 —— 均需后端先补表或补接口，详见上文缺口清单。
+教室申请（申请 / 我的申请 / 取消）、调课申请、课表与教学任务页面 —— 教室申请与调课**后端仍无表无接口**，需先定表结构；课表可基于新的 `base_teaching_task` 落地。
