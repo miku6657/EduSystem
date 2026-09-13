@@ -29,7 +29,12 @@ const canLoad = computed(() =>
   userStore.isTeacher ? userStore.businessId > 0 : studentClassId.value > 0,
 )
 
-const { data: tasks, loading, error, reload } = useAsyncData<TeachingTask[]>(() => {
+const {
+  data: tasks,
+  loading,
+  error,
+  reload,
+} = useAsyncData<TeachingTask[]>(() => {
   if (userStore.isTeacher) {
     return userStore.businessId ? listTasksByTeacher(userStore.businessId) : Promise.resolve([])
   }
@@ -95,10 +100,7 @@ onMounted(reload)
         </div>
       </div>
 
-      <van-pull-refresh
-        :model-value="false"
-        @refresh="reload"
-      >
+      <van-pull-refresh :model-value="false" @refresh="reload">
         <div v-if="loading" class="st-empty">
           <van-loading vertical>加载中…</van-loading>
         </div>
@@ -112,13 +114,19 @@ onMounted(reload)
         <template v-else>
           <template v-for="group in grouped" :key="group.weekday">
             <div class="st-section-title">{{ group.title }}</div>
-            <div v-for="task in group.rows" :key="task.id ?? `${task.courseId}-${task.classId}`" class="st-card">
+            <div
+              v-for="task in group.rows"
+              :key="task.id ?? `${task.courseId}-${task.classId}`"
+              class="st-card"
+            >
               <div class="st-row">
                 <div class="tt__course">{{ task.courseName || `课程#${task.courseId}` }}</div>
                 <van-tag type="primary" plain>{{ slotText(task) }}</van-tag>
               </div>
               <div class="tt__meta st-muted">
-                <template v-if="userStore.isTeacher">{{ task.className || `班级#${task.classId}` }}</template>
+                <template v-if="userStore.isTeacher">{{
+                  task.className || `班级#${task.classId}`
+                }}</template>
                 <template v-else>{{ task.teacherName || '教师待定' }}</template>
                 <template v-if="task.roomName"> · {{ task.roomName }}</template>
                 <template v-if="task.weeks"> · {{ task.weeks }}</template>
@@ -134,7 +142,9 @@ onMounted(reload)
                 <van-tag type="warning" plain>待排课</van-tag>
               </div>
               <div class="tt__meta st-muted">
-                <template v-if="userStore.isTeacher">{{ task.className || `班级#${task.classId}` }}</template>
+                <template v-if="userStore.isTeacher">{{
+                  task.className || `班级#${task.classId}`
+                }}</template>
                 <template v-else>{{ task.teacherName || '教师待定' }}</template>
               </div>
             </div>

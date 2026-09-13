@@ -24,7 +24,12 @@ const userStore = useUserStore()
 const refreshing = ref(false)
 
 /** 我的申请 */
-const { data: applies, loading, error, reload } = useAsyncData<ClassroomApply[]>(
+const {
+  data: applies,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ClassroomApply[]>(
   () => (userStore.token ? listMyClassroomApplies() : Promise.resolve([])),
   [],
 )

@@ -17,7 +17,12 @@ const userStore = useUserStore()
 const teacherId = computed(() => userStore.businessId)
 const today = todayStr()
 
-const { data: monitors, loading, error, reload } = useAsyncData<ExamMonitor[]>(
+const {
+  data: monitors,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ExamMonitor[]>(
   () => (teacherId.value ? listMyInvigilations(teacherId.value) : Promise.resolve([])),
   [],
 )
@@ -109,15 +114,24 @@ onMounted(reload)
       <van-empty v-else-if="groups.length === 0" description="暂无监考安排" />
 
       <template v-else>
-        <div v-for="group in groups" :key="group.date" class="st-card"
-          :class="{ 'inv__group--finished': group.finished }">
+        <div
+          v-for="group in groups"
+          :key="group.date"
+          class="st-card"
+          :class="{ 'inv__group--finished': group.finished }"
+        >
           <div class="st-row">
             <span class="inv__date">{{ group.date }}</span>
             <van-tag v-if="group.finished" plain>已结束</van-tag>
-            <van-tag v-else type="primary" plain>{{ group.date === today ? '今天' : '待监考' }}</van-tag>
+            <van-tag v-else type="primary" plain>{{
+              group.date === today ? '今天' : '待监考'
+            }}</van-tag>
           </div>
-          <div v-for="item in group.items" :key="item.id ?? `${item.examId}-${item.teacherId}`"
-            class="inv__item">
+          <div
+            v-for="item in group.items"
+            :key="item.id ?? `${item.examId}-${item.teacherId}`"
+            class="inv__item"
+          >
             <div class="st-row">
               <span class="inv__exam">{{ item.examName || `考试#${item.examId}` }}</span>
               <van-tag :type="item.monitorRole === 'MAIN' ? 'danger' : 'primary'">
@@ -136,13 +150,38 @@ onMounted(reload)
 </template>
 
 <style scoped>
-.inv__summary { display: flex; justify-content: space-around; text-align: center; }
-.inv__summary-value { font-size: 20px; font-weight: 600; }
-.inv__summary-next { font-size: 13px; font-weight: 600; }
-.inv__date { font-size: 15px; font-weight: 600; }
-.inv__item { padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--st-border); }
-.inv__exam { font-size: 14px; font-weight: 600; }
-.inv__meta { margin: 4px 0; }
+.inv__summary {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+.inv__summary-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+.inv__summary-next {
+  font-size: 13px;
+  font-weight: 600;
+}
+.inv__date {
+  font-size: 15px;
+  font-weight: 600;
+}
+.inv__item {
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--st-border);
+}
+.inv__exam {
+  font-size: 14px;
+  font-weight: 600;
+}
+.inv__meta {
+  margin: 4px 0;
+}
 /* 已过期的监考置灰 */
-.inv__group--finished { color: var(--st-text-light); background: #fafafa; }
+.inv__group--finished {
+  color: var(--st-text-light);
+  background: #fafafa;
+}
 </style>

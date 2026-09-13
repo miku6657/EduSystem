@@ -33,17 +33,45 @@ const reportDate = ref(today)
 const marks = ref<Record<number, string>>({})
 const saving = ref(false)
 
-const { data: classes, loading: classLoading, error: classError, reload: reloadClasses } =
-  useAsyncData<ClassInfo[]>(() => (teacherId.value ? listMyClasses(teacherId.value) : Promise.resolve([])), [])
-const { data: courses, loading: courseLoading, error: courseError, reload: reloadCourses } =
-  useAsyncData<Course[]>(() => (teacherId.value ? listMyCourses(teacherId.value) : Promise.resolve([])), [])
-const { data: students, loading: studentLoading, error: studentError, reload: reloadStudents } =
-  useAsyncData<Student[]>(() => (classId.value ? listStudentsByClass(classId.value) : Promise.resolve([])), [])
-const { data: report, loading: reportLoading, error: reportError, reload: reloadReport } =
-  useAsyncData<WeeklyReportRow[]>(
-    () => (reportClassId.value ? getWeeklyReport(reportClassId.value, reportDate.value) : Promise.resolve([])),
-    [],
-  )
+const {
+  data: classes,
+  loading: classLoading,
+  error: classError,
+  reload: reloadClasses,
+} = useAsyncData<ClassInfo[]>(
+  () => (teacherId.value ? listMyClasses(teacherId.value) : Promise.resolve([])),
+  [],
+)
+const {
+  data: courses,
+  loading: courseLoading,
+  error: courseError,
+  reload: reloadCourses,
+} = useAsyncData<Course[]>(
+  () => (teacherId.value ? listMyCourses(teacherId.value) : Promise.resolve([])),
+  [],
+)
+const {
+  data: students,
+  loading: studentLoading,
+  error: studentError,
+  reload: reloadStudents,
+} = useAsyncData<Student[]>(
+  () => (classId.value ? listStudentsByClass(classId.value) : Promise.resolve([])),
+  [],
+)
+const {
+  data: report,
+  loading: reportLoading,
+  error: reportError,
+  reload: reloadReport,
+} = useAsyncData<WeeklyReportRow[]>(
+  () =>
+    reportClassId.value
+      ? getWeeklyReport(reportClassId.value, reportDate.value)
+      : Promise.resolve([]),
+  [],
+)
 
 /** 按当前学生列表重建标记；status 为空时保留已改动，否则统一设为该状态 */
 function buildMarks(status?: string): Record<number, string> {
@@ -114,14 +142,24 @@ const showClassPicker = ref(false)
 const showCoursePicker = ref(false)
 const showDatePicker = ref(false)
 
-const classText = computed(() => classes.value.find((item) => item.id === classId.value)?.name ?? '')
-const courseText = computed(() => courses.value.find((item) => item.id === courseId.value)?.name ?? '')
+const classText = computed(
+  () => classes.value.find((item) => item.id === classId.value)?.name ?? '',
+)
+const courseText = computed(
+  () => courses.value.find((item) => item.id === courseId.value)?.name ?? '',
+)
 const reportClassText = computed(
   () => classes.value.find((item) => item.id === reportClassId.value)?.name ?? '',
 )
-const classColumns = computed(() => classes.value.map((item) => ({ text: item.name, value: item.id })))
-const courseColumns = computed(() => courses.value.map((item) => ({ text: item.name, value: item.id })))
-const pickerClassId = computed(() => (pickerTarget.value === 'entry' ? classId.value : reportClassId.value))
+const classColumns = computed(() =>
+  classes.value.map((item) => ({ text: item.name, value: item.id })),
+)
+const courseColumns = computed(() =>
+  courses.value.map((item) => ({ text: item.name, value: item.id })),
+)
+const pickerClassId = computed(() =>
+  pickerTarget.value === 'entry' ? classId.value : reportClassId.value,
+)
 const pickerDateValues = computed(() =>
   (pickerTarget.value === 'entry' ? attendanceDate.value : reportDate.value).split('-'),
 )
@@ -225,22 +263,49 @@ onMounted(() => {
         <div v-if="classLoading || courseLoading" class="st-empty">
           <van-loading vertical>加载中…</van-loading>
         </div>
-        <van-empty v-else-if="classError || courseError" image="error" :description="classError || courseError" />
-        <van-empty v-else-if="!classes.length || !courses.length"
-          :description="classes.length ? '暂无任教课程' : '暂无任教班级'" />
+        <van-empty
+          v-else-if="classError || courseError"
+          image="error"
+          :description="classError || courseError"
+        />
+        <van-empty
+          v-else-if="!classes.length || !courses.length"
+          :description="classes.length ? '暂无任教课程' : '暂无任教班级'"
+        />
         <template v-else>
           <div class="st-card">
-            <van-field readonly is-link label="班级" placeholder="请选择班级" :model-value="classText"
-              @click="openClassPicker('entry')" />
-            <van-field readonly is-link label="课程" placeholder="请选择课程" :model-value="courseText"
-              @click="openCoursePicker" />
-            <van-field readonly is-link label="上课日期" :model-value="attendanceDate"
-              @click="openDatePicker('entry')" />
+            <van-field
+              readonly
+              is-link
+              label="班级"
+              placeholder="请选择班级"
+              :model-value="classText"
+              @click="openClassPicker('entry')"
+            />
+            <van-field
+              readonly
+              is-link
+              label="课程"
+              placeholder="请选择课程"
+              :model-value="courseText"
+              @click="openCoursePicker"
+            />
+            <van-field
+              readonly
+              is-link
+              label="上课日期"
+              :model-value="attendanceDate"
+              @click="openDatePicker('entry')"
+            />
           </div>
 
           <div class="st-row sa__bar">
-            <span class="st-muted">已标记异常 {{ abnormalCount }} 人 / 共 {{ students.length }} 人</span>
-            <van-button size="mini" plain type="primary" @click="markAllNormal">全部标记为正常</van-button>
+            <span class="st-muted"
+              >已标记异常 {{ abnormalCount }} 人 / 共 {{ students.length }} 人</span
+            >
+            <van-button size="mini" plain type="primary" @click="markAllNormal"
+              >全部标记为正常</van-button
+            >
           </div>
 
           <div v-if="studentLoading" class="st-empty">
@@ -255,7 +320,11 @@ onMounted(() => {
                 <span class="sa__name">{{ student.name }}</span>
                 <span class="st-muted">{{ student.studentNo }}</span>
               </div>
-              <van-radio-group v-model="marks[student.id ?? 0]" direction="horizontal" class="sa__options">
+              <van-radio-group
+                v-model="marks[student.id ?? 0]"
+                direction="horizontal"
+                class="sa__options"
+              >
                 <van-radio v-for="status in STUDENT_ATTENDANCE_STATUS" :key="status" :name="status">
                   {{ status }}
                 </van-radio>
@@ -276,17 +345,30 @@ onMounted(() => {
         <van-empty v-else-if="!classes.length" :description="classError || '暂无任教班级'" />
         <template v-else>
           <div class="st-card">
-            <van-field readonly is-link label="班级" placeholder="请选择班级" :model-value="reportClassText"
-              @click="openClassPicker('report')" />
-            <van-field readonly is-link label="所在周" :model-value="reportDate"
-              @click="openDatePicker('report')" />
+            <van-field
+              readonly
+              is-link
+              label="班级"
+              placeholder="请选择班级"
+              :model-value="reportClassText"
+              @click="openClassPicker('report')"
+            />
+            <van-field
+              readonly
+              is-link
+              label="所在周"
+              :model-value="reportDate"
+              @click="openDatePicker('report')"
+            />
           </div>
 
           <div v-if="reportLoading" class="st-empty">
             <van-loading vertical>加载中…</van-loading>
           </div>
           <van-empty v-else-if="reportError" image="error" :description="reportError">
-            <van-button round type="primary" size="small" @click="reloadReport">重新加载</van-button>
+            <van-button round type="primary" size="small" @click="reloadReport"
+              >重新加载</van-button
+            >
           </van-empty>
           <van-empty v-else-if="!reportClassId" description="请先选择班级" />
           <van-empty v-else-if="report.length === 0" description="本周暂无考勤数据" />
@@ -311,23 +393,52 @@ onMounted(() => {
 
     <!-- 班级 / 课程 / 日期选择器 -->
     <van-popup v-model:show="showClassPicker" position="bottom" round>
-      <van-picker title="选择班级" :columns="classColumns" :model-value="[pickerClassId]"
-        @confirm="onClassConfirm" @cancel="showClassPicker = false" />
+      <van-picker
+        title="选择班级"
+        :columns="classColumns"
+        :model-value="[pickerClassId]"
+        @confirm="onClassConfirm"
+        @cancel="showClassPicker = false"
+      />
     </van-popup>
     <van-popup v-model:show="showCoursePicker" position="bottom" round>
-      <van-picker title="选择课程" :columns="courseColumns" :model-value="[courseId]"
-        @confirm="onCourseConfirm" @cancel="showCoursePicker = false" />
+      <van-picker
+        title="选择课程"
+        :columns="courseColumns"
+        :model-value="[courseId]"
+        @confirm="onCourseConfirm"
+        @cancel="showCoursePicker = false"
+      />
     </van-popup>
     <van-popup v-model:show="showDatePicker" position="bottom" round>
-      <van-date-picker title="选择日期" :model-value="pickerDateValues" :max-date="maxDate"
-        @confirm="onDateConfirm" @cancel="showDatePicker = false" />
+      <van-date-picker
+        title="选择日期"
+        :model-value="pickerDateValues"
+        :max-date="maxDate"
+        @confirm="onDateConfirm"
+        @cancel="showDatePicker = false"
+      />
     </van-popup>
   </div>
 </template>
 
 <style scoped>
-.sa__bar { margin: 0 4px 10px; }
-.sa__options { margin-top: 10px; }
-.sa__name { font-size: 15px; font-weight: 600; }
-.sa__report { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12px; color: var(--st-text-light); }
+.sa__bar {
+  margin: 0 4px 10px;
+}
+.sa__options {
+  margin-top: 10px;
+}
+.sa__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.sa__report {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--st-text-light);
+}
 </style>

@@ -31,11 +31,14 @@ interface DayAttendance {
 }
 
 /** 本人近 7 天签到记录 */
-const { data: myRecords, loading, error, reload } = useAsyncData<TeacherAttendanceRecord[]>(
+const {
+  data: myRecords,
+  loading,
+  error,
+  reload,
+} = useAsyncData<TeacherAttendanceRecord[]>(
   () =>
-    teacherId.value
-      ? listMyAttendance(teacherId.value, weekStart, today)
-      : Promise.resolve([]),
+    teacherId.value ? listMyAttendance(teacherId.value, weekStart, today) : Promise.resolve([]),
   [],
 )
 /** 今日全校出勤统计 */
@@ -45,9 +48,7 @@ const { data: stat, reload: reloadStat } = useAsyncData<TeacherAttendanceStat>(
 )
 
 /** 今日本人签到记录 */
-const myToday = computed(() =>
-  myRecords.value.find((item) => item.attendanceDate === today),
-)
+const myToday = computed(() => myRecords.value.find((item) => item.attendanceDate === today))
 
 /** 近 7 天逐日视图：缺失的日期显示"未签到" */
 const recent = computed<DayAttendance[]>(() => {
@@ -134,9 +135,20 @@ onMounted(reloadAll)
           <van-tag v-else size="large" type="warning">未签到</van-tag>
         </div>
         <div class="st-muted">
-          {{ myToday ? `签到时间 ${timeText(myToday.checkTime) || myToday.checkTime || '—'}` : '今日暂无签到记录' }}
+          {{
+            myToday
+              ? `签到时间 ${timeText(myToday.checkTime) || myToday.checkTime || '—'}`
+              : '今日暂无签到记录'
+          }}
         </div>
-        <van-button class="check__btn" round block type="primary" :loading="submitting" @click="onCheckIn">
+        <van-button
+          class="check__btn"
+          round
+          block
+          type="primary"
+          :loading="submitting"
+          @click="onCheckIn"
+        >
           {{ checkButtonText }}
         </van-button>
       </div>
@@ -171,7 +183,11 @@ onMounted(reloadAll)
         <div v-for="row in recent" :key="row.date" class="st-card st-row">
           <span>{{ row.date }}</span>
           <span class="check__recent-right">
-            <van-tag v-if="row.status" plain :type="ATTENDANCE_STATUS_TYPE[row.status] || 'primary'">
+            <van-tag
+              v-if="row.status"
+              plain
+              :type="ATTENDANCE_STATUS_TYPE[row.status] || 'primary'"
+            >
               {{ row.status }}
             </van-tag>
             <van-tag v-else plain>未签到</van-tag>
@@ -184,11 +200,31 @@ onMounted(reloadAll)
 </template>
 
 <style scoped>
-.check__today { text-align: center; }
-.check__date { font-size: 14px; font-weight: 600; }
-.check__status { margin: 10px 0 6px; }
-.check__btn { margin-top: 14px; }
-.check__stat { display: flex; justify-content: space-around; text-align: center; }
-.check__stat-value { font-size: 20px; font-weight: 600; }
-.check__recent-right { display: flex; gap: 6px; align-items: center; }
+.check__today {
+  text-align: center;
+}
+.check__date {
+  font-size: 14px;
+  font-weight: 600;
+}
+.check__status {
+  margin: 10px 0 6px;
+}
+.check__btn {
+  margin-top: 14px;
+}
+.check__stat {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+.check__stat-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+.check__recent-right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
 </style>

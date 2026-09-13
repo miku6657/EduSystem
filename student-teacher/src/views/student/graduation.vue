@@ -14,7 +14,12 @@ import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, PASS_FAIL_TEXT, dictText } from '
 const userStore = useUserStore()
 const refreshing = ref(false)
 
-const { data: check, loading, error, reload } = useAsyncData<GraduateCheck | null>(
+const {
+  data: check,
+  loading,
+  error,
+  reload,
+} = useAsyncData<GraduateCheck | null>(
   () => (userStore.businessId ? getMyGraduateCheck(userStore.businessId) : Promise.resolve(null)),
   null,
 )
@@ -23,12 +28,24 @@ const { data: check, loading, error, reload } = useAsyncData<GraduateCheck | nul
 const conclusion = computed(() => {
   const status = check.value?.checkStatus
   if (status === 'PASS') {
-    return { theme: 'pass', title: '已通过毕业资格审核', desc: '学分与课程要求均已满足，请按教务处通知办理毕业手续。' }
+    return {
+      theme: 'pass',
+      title: '已通过毕业资格审核',
+      desc: '学分与课程要求均已满足，请按教务处通知办理毕业手续。',
+    }
   }
   if (status === 'FAIL') {
-    return { theme: 'fail', title: '未通过毕业资格审核', desc: '请尽快参加补考或重修，成绩合格后由教务重新审核。' }
+    return {
+      theme: 'fail',
+      title: '未通过毕业资格审核',
+      desc: '请尽快参加补考或重修，成绩合格后由教务重新审核。',
+    }
   }
-  return { theme: 'wait', title: '审核中，请耐心等待', desc: '教务正在审核你的毕业资格，结果更新后会显示在本页。' }
+  return {
+    theme: 'wait',
+    title: '审核中，请耐心等待',
+    desc: '教务正在审核你的毕业资格，结果更新后会显示在本页。',
+  }
 })
 
 const isFail = computed(() => check.value?.checkStatus === 'FAIL')
@@ -122,31 +139,70 @@ onMounted(reload)
 </template>
 
 <style scoped>
-.graduate__result { border-left: 4px solid var(--st-text-light); }
+.graduate__result {
+  border-left: 4px solid var(--st-text-light);
+}
 
-.graduate__result--pass { background: #f0fff4; border-left-color: #07c160; }
+.graduate__result--pass {
+  background: #f0fff4;
+  border-left-color: #07c160;
+}
 
-.graduate__result--fail { background: #fff5f5; border-left-color: #ee0a24; }
+.graduate__result--fail {
+  background: #fff5f5;
+  border-left-color: #ee0a24;
+}
 
-.graduate__result--wait { background: #fffaf5; border-left-color: #ff976a; }
+.graduate__result--wait {
+  background: #fffaf5;
+  border-left-color: #ff976a;
+}
 
-.graduate__result-title { font-size: 20px; font-weight: 600; }
+.graduate__result-title {
+  font-size: 20px;
+  font-weight: 600;
+}
 
-.graduate__result--pass .graduate__result-title { color: #07c160; }
+.graduate__result--pass .graduate__result-title {
+  color: #07c160;
+}
 
-.graduate__result--fail .graduate__result-title { color: #ee0a24; }
+.graduate__result--fail .graduate__result-title {
+  color: #ee0a24;
+}
 
-.graduate__result--wait .graduate__result-title { color: #ff976a; }
+.graduate__result--wait .graduate__result-title {
+  color: #ff976a;
+}
 
-.graduate__result-desc { margin: 6px 0 8px; font-size: 13px; line-height: 1.6; color: var(--st-text-light); }
+.graduate__result-desc {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--st-text-light);
+}
 
-.graduate__detail { margin-bottom: 6px; }
+.graduate__detail {
+  margin-bottom: 6px;
+}
 
-.graduate__remark { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--st-border); }
+.graduate__remark {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--st-border);
+}
 
-.graduate__remark-text { margin-top: 4px; line-height: 1.5; }
+.graduate__remark-text {
+  margin-top: 4px;
+  line-height: 1.5;
+}
 
-.graduate__rules p { margin: 0 0 6px; line-height: 1.6; }
+.graduate__rules p {
+  margin: 0 0 6px;
+  line-height: 1.6;
+}
 
-.graduate__rules p:last-child { margin-bottom: 0; }
+.graduate__rules p:last-child {
+  margin-bottom: 0;
+}
 </style>

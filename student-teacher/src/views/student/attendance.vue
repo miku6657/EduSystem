@@ -30,7 +30,12 @@ const dateRange = computed(() => {
   return { start: addDays(end, rangeKey.value === 'biweek' ? -13 : -29), end }
 })
 
-const { data: records, loading, error, reload } = useAsyncData<StudentAttendanceRecord[]>(
+const {
+  data: records,
+  loading,
+  error,
+  reload,
+} = useAsyncData<StudentAttendanceRecord[]>(
   () =>
     userStore.businessId
       ? listMyAttendance(userStore.businessId, dateRange.value.start, dateRange.value.end)
@@ -108,7 +113,9 @@ onMounted(reload)
       <van-tab title="近30天" name="month" />
     </van-tabs>
 
-    <div class="attendance__range st-muted">统计区间：{{ dateRange.start }} ~ {{ dateRange.end }}</div>
+    <div class="attendance__range st-muted">
+      统计区间：{{ dateRange.start }} ~ {{ dateRange.end }}
+    </div>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <!-- 未解析到学号：明确提示，不发请求 -->

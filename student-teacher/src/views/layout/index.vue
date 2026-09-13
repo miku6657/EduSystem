@@ -31,12 +31,7 @@ function onTabChange(path: string) {
       <router-view />
     </div>
 
-    <van-tabbar
-      :model-value="activePath"
-      fixed
-      active-color="#1989fa"
-      @change="onTabChange"
-    >
+    <van-tabbar :model-value="activePath" fixed active-color="#1989fa" @change="onTabChange">
       <van-tabbar-item
         v-for="item in tabs"
         :key="item.path"

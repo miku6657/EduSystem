@@ -26,7 +26,12 @@ const typeOptions = RETAKE_TYPE_OPTIONS
 const courseOptions = ref<Course[]>([])
 const coursesLoading = ref(false)
 
-const { data: retakes, loading, error, reload } = useAsyncData<ExamRetake[]>(
+const {
+  data: retakes,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ExamRetake[]>(
   () => (userStore.businessId ? listMyRetakes(userStore.businessId) : Promise.resolve([])),
   [],
 )
@@ -52,7 +57,9 @@ function examTextOf(row: ExamRetake): string {
   if (row.examName) {
     return `已安排：${row.examName}`
   }
-  return row.examId === null || row.examId === undefined ? '待教务安排' : `已安排场次 #${row.examId}`
+  return row.examId === null || row.examId === undefined
+    ? '待教务安排'
+    : `已安排场次 #${row.examId}`
 }
 
 /** 课程选项：首次打开弹层时拉取（一次 50 条足够选课用） */
@@ -94,7 +101,8 @@ async function onSubmit() {
     showToast('请选择要申请的课程')
     return
   }
-  const courseName = courseOptions.value.find((item) => item.id === courseId)?.name ?? `课程#${courseId}`
+  const courseName =
+    courseOptions.value.find((item) => item.id === courseId)?.name ?? `课程#${courseId}`
   try {
     await showConfirmDialog({
       title: '确认申请',
@@ -183,14 +191,26 @@ onMounted(reload)
         </div>
         <van-empty v-else-if="courseOptions.length === 0" description="暂无可申请课程" />
         <van-radio-group v-else v-model="selectedCourseId" class="retake__courses">
-          <van-radio v-for="course in courseOptions" :key="course.id" :name="course.id" class="retake__course-item">
+          <van-radio
+            v-for="course in courseOptions"
+            :key="course.id"
+            :name="course.id"
+            class="retake__course-item"
+          >
             {{ course.name }}
             <span v-if="course.credit" class="st-muted">（{{ course.credit }} 学分）</span>
           </van-radio>
         </van-radio-group>
 
         <div class="retake__popup-actions">
-          <van-button round block type="primary" native-type="submit" :loading="submitting" :disabled="courseOptions.length === 0">
+          <van-button
+            round
+            block
+            type="primary"
+            native-type="submit"
+            :loading="submitting"
+            :disabled="courseOptions.length === 0"
+          >
             提交申请
           </van-button>
         </div>
@@ -199,7 +219,8 @@ onMounted(reload)
 
     <!-- 静态说明 -->
     <div class="st-card retake__tip st-muted">
-      说明：申请提交后由教务统一安排补考 / 重修场次，安排完成后会显示考试名称；同一门课程存在"待安排"申请时不能重复提交，且课程成绩已及格时不允许申请。
+      说明：申请提交后由教务统一安排补考 /
+      重修场次，安排完成后会显示考试名称；同一门课程存在"待安排"申请时不能重复提交，且课程成绩已及格时不允许申请。
     </div>
   </div>
 </template>
@@ -210,27 +231,61 @@ onMounted(reload)
   text-align: center;
 }
 
-.retake__summary-item { flex: 1; }
+.retake__summary-item {
+  flex: 1;
+}
 
-.retake__summary-value { font-size: 20px; font-weight: 600; }
+.retake__summary-value {
+  font-size: 20px;
+  font-weight: 600;
+}
 
-.retake__actions { margin-bottom: 12px; }
+.retake__actions {
+  margin-bottom: 12px;
+}
 
-.retake__course { font-size: 15px; font-weight: 600; }
+.retake__course {
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.retake__meta { margin-top: 6px; }
+.retake__meta {
+  margin-top: 6px;
+}
 
-.retake__popup-title { padding: 14px 16px 6px; font-size: 16px; font-weight: 600; text-align: center; }
+.retake__popup-title {
+  padding: 14px 16px 6px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
 
-.retake__field-label { padding: 8px 16px 4px; font-size: 13px; color: var(--st-text-light); }
+.retake__field-label {
+  padding: 8px 16px 4px;
+  font-size: 13px;
+  color: var(--st-text-light);
+}
 
-.retake__types { padding: 0 16px 6px; }
+.retake__types {
+  padding: 0 16px 6px;
+}
 
-.retake__courses { max-height: 45vh; padding: 4px 16px; overflow-y: auto; }
+.retake__courses {
+  max-height: 45vh;
+  padding: 4px 16px;
+  overflow-y: auto;
+}
 
-.retake__course-item { padding: 6px 0; }
+.retake__course-item {
+  padding: 6px 0;
+}
 
-.retake__popup-actions { padding: 8px 16px 20px; }
+.retake__popup-actions {
+  padding: 8px 16px 20px;
+}
 
-.retake__tip { margin-top: 16px; line-height: 1.6; }
+.retake__tip {
+  margin-top: 16px;
+  line-height: 1.6;
+}
 </style>

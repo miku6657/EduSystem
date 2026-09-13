@@ -96,8 +96,7 @@ async function onSubmit() {
         />
       </van-cell-group>
       <p class="st-muted login__tip">
-        正式环境请用学校统一身份（CAS）或教务下发的账号登录；
-        管理员请使用后台管理端（admin 工程）。
+        正式环境请用学校统一身份（CAS）或教务下发的账号登录； 管理员请使用后台管理端（admin 工程）。
       </p>
     </div>
   </div>

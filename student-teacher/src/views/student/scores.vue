@@ -20,7 +20,12 @@ const userStore = useUserStore()
 const filter = ref<'all' | 'pass' | 'fail'>('all')
 const refreshing = ref(false)
 
-const { data: scores, loading, error, reload } = useAsyncData<ExamScore[]>(
+const {
+  data: scores,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ExamScore[]>(
   () => (userStore.businessId ? listMyScores(userStore.businessId) : Promise.resolve([])),
   [],
 )
@@ -111,7 +116,11 @@ onMounted(reload)
       <van-empty v-else-if="visibleScores.length === 0" description="暂无成绩记录" />
 
       <template v-else>
-        <div v-for="row in visibleScores" :key="row.id ?? `${row.examId}-${row.studentId}`" class="st-card">
+        <div
+          v-for="row in visibleScores"
+          :key="row.id ?? `${row.examId}-${row.studentId}`"
+          class="st-card"
+        >
           <div class="st-row">
             <div class="score__name">{{ row.courseName || row.examName }}</div>
             <div class="score__value" :style="{ color: scoreColor(row) }">
@@ -126,7 +135,9 @@ onMounted(reload)
             </span>
           </div>
           <div v-if="row.status && row.status !== 'NORMAL'" class="score__tag">
-            <van-tag type="warning" plain>{{ SCORE_STATUS_TEXT[row.status] || row.status }}</van-tag>
+            <van-tag type="warning" plain>{{
+              SCORE_STATUS_TEXT[row.status] || row.status
+            }}</van-tag>
           </div>
         </div>
       </template>

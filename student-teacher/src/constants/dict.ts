@@ -26,12 +26,13 @@ export const PASS_FAIL_TEXT: Record<string, string> = {
 /** 学生考勤状态（student_attendance.status） */
 export const STUDENT_ATTENDANCE_STATUS = ['正常', '迟到', '缺勤', '请假'] as const
 
-export const ATTENDANCE_STATUS_TYPE: Record<string, 'success' | 'warning' | 'danger' | 'primary'> = {
-  正常: 'success',
-  迟到: 'warning',
-  缺勤: 'danger',
-  请假: 'primary',
-}
+export const ATTENDANCE_STATUS_TYPE: Record<string, 'success' | 'warning' | 'danger' | 'primary'> =
+  {
+    正常: 'success',
+    迟到: 'warning',
+    缺勤: 'danger',
+    请假: 'primary',
+  }
 
 /** 教师考勤状态（teacher_attendance.status） */
 export const TEACHER_ATTENDANCE_STATUS = ['正常', '迟到', '缺勤'] as const
@@ -81,13 +82,7 @@ export const CLASSROOM_APPLY_STATUS_TYPE: Record<
 }
 
 /** 教室使用时段候选（与后端 time_slot 字段自由文本兼容） */
-export const TIME_SLOT_OPTIONS = [
-  '第1-2节',
-  '第3-4节',
-  '第5-6节',
-  '第7-8节',
-  '晚上',
-] as const
+export const TIME_SLOT_OPTIONS = ['第1-2节', '第3-4节', '第5-6节', '第7-8节', '晚上'] as const
 
 /** 教材/教室等通用状态兜底文案 */
 export function dictText(map: Record<string, string>, key?: string | null, fallback = '—'): string {

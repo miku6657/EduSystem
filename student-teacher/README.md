@@ -31,6 +31,8 @@ npm run dev        # http://localhost:5174
 | `npm run type-check` | `vue-tsc` 类型检查 |
 | `npm run build` | 类型检查 + 生产构建 |
 | `npm run preview` | 预览构建产物 |
+| `npm run lint` | ESLint 检查并自动修复（`lint:check` 只检查不修复） |
+| `npm run format` | Prettier 统一格式 |
 
 ## 目录结构
 
@@ -39,7 +41,7 @@ src
 ├── api/            按后端模块划分的接口层（auth / score / attendance / teacherAttendance /
 │                   teachingLog / retake / upgrade / graduation / examApply / examMonitor /
 │                   exam / base / profile / term）
-├── components/     （暂无；Vant 组件按需自动导入）
+├── components/     PageState（加载/失败/空三态）、StatBar（统计条）
 ├── composables/    useAsyncData —— 统一 loading / error / reload
 ├── constants/      dict.ts —— 状态字典（与后端枚举值一一对应）
 ├── mock/           index.ts —— 本地 Mock，路径与后端 Controller 完全一致
@@ -47,7 +49,7 @@ src
 ├── stores/         user（登录态 + 业务身份 + 当前学期）
 ├── styles/         全局样式（.st-page / .st-card 等）
 ├── types/          api / user / router meta
-├── utils/          request（**双契约兼容**）/ format / role / storage
+├── utils/          request（**双契约兼容**）/ format / role / storage / excel（导出 xlsx）
 └── views/
     ├── login/          登录
     ├── layout/         Layout（顶栏 + 底部 tabbar）
@@ -97,6 +99,8 @@ src
 | 成绩录入 | `/teacher/scores` | `GET /api/score/page-by-exam`、`POST /api/score/save/{examId}`、`GET /api/score/stat/{examId}`、`GET /api/exams` | ✅ 已实现（已带学生姓名） |
 | 考核方式申报 | `/teacher/method-apply` | `POST /api/exam-apply/apply`、`GET /api/exam-apply/my/list`、`GET /api/teachers/{id}/courses` | ✅ 已实现 |
 | 我的监考 | `/teacher/invigilation` | `GET /api/exam-monitor/list-by-teacher/{teacherId}` | ✅ 已实现（已带考试/考场信息） |
+| **班级花名册** | `/teacher/roster` | `GET /api/teachers/{id}/classes`、`GET /api/students?classId=` | ✅ 已实现（含关键字搜索与 **Excel 导出**） |
+| 我的待办 | `/home` 顶部 | `list-by-teacher`（教师）/ `classroom-applies/my`、`retake`、`upgrade`（学生） | ✅ 已实现（前端用现有接口拼装，无需后端待办接口） |
 
 ## 后端配套改动
 
@@ -151,12 +155,17 @@ src
   - 错误密码被拒、无 token 访问受保护接口返回 401、学生越权审批返回 403
   - 学生课表 / 成绩 / 教室申请（提交后 1→2 条，真实写库）/ 教师教学任务 / 监考（多考场用顿号合并）/ 我的调课（提交后 1→2 条）全部正常
   - 过程中的三个真 bug 已修：`schema.sql` 因中文默认值 + 客户端 GBK 导致建表中断、`sync-db.cmd` 被 cmd 按 GBK 解析导致整行被当命令、`@PreAuthorize` 拒绝被全局异常兜底成 500（现为 403）
+- **工程化（2026-09-13 补充）**：
+  - `npm run lint`（ESLint 9 扁平配置）实际检查 **65 个文件（含 22 个 .vue）0 问题**；
+  - `npm run format`（Prettier）全量统一格式后 `--check` 全部合规；
+  - 成绩导出 Excel 使用 `xlsx`，构建时**自动分包**（`excel-*.js` 约 275KB，只在用到导出的页面加载，主包仍 182KB）。
 
 ## 下一步
 
-业务页面已全部落地（学生 5 + 教师 7 + 共用 2）。剩下的是纯加分项与工程化收尾：
+**师生端业务页面与工程化收尾已全部完成**：19 个页面（学生端 5 + 教师端 8 + 共用 2 + 登录/首页/Layout/404）、
+首页待办、成绩导出 Excel、班级花名册、公共三态组件、ESLint + Prettier、真实端到端联调。
 
-1. **教师端成绩导出 Excel**（需给师生端加 `xlsx` 依赖）与 **班级花名册**；
-2. **首页待办**：用现有接口（今日未签到 / 本周日志是否提交 / 近期待监考 / 待审核报名等）在前端拼装，无需新接口；
-3. **工程化**：抽公共组件（加载/错误/空三态、统计条），配 ESLint/Prettier；
-4. **联调收尾**：关掉 mock（`VITE_USE_MOCK=false`）与真实后端跑一轮端到端，把字段差异当场修掉。
+后续可选（按优先级）：
+1. 把历史页面逐步迁移到 `PageState` / `StatBar`（新页面已在用，旧页面目前各自实现三态）；
+2. 管理端（`admin`）把教室申请审批、调课审批从 mock 切到真实接口（后端已就绪）；
+3. 后端侧遗留：成绩保存的任课归属校验、教学日志/考勤录入的角色鉴权、响应契约统一（详见上文缺口清单）。

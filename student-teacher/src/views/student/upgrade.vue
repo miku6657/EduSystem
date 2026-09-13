@@ -21,7 +21,12 @@ const submitting = ref(false)
 /** 报名表单：院校 / 专业必填，备注选填 */
 const form = reactive({ schoolName: '', majorName: '', remark: '' })
 
-const { data: applies, loading, error, reload } = useAsyncData<UpgradeApply[]>(
+const {
+  data: applies,
+  loading,
+  error,
+  reload,
+} = useAsyncData<UpgradeApply[]>(
   () => (userStore.businessId ? listMyUpgradeApplies(userStore.businessId) : Promise.resolve([])),
   [],
 )
@@ -126,7 +131,11 @@ onMounted(reload)
       <van-empty v-else-if="applies.length === 0" description="暂无专升本报名记录" />
 
       <template v-else>
-        <div v-for="row in applies" :key="row.id ?? `${row.schoolName}-${row.majorName}`" class="st-card">
+        <div
+          v-for="row in applies"
+          :key="row.id ?? `${row.schoolName}-${row.majorName}`"
+          class="st-card"
+        >
           <div class="st-row">
             <div class="upgrade__school">{{ row.schoolName || '—' }}</div>
             <van-tag :type="statusTypeOf(row)">{{ statusTextOf(row) }}</van-tag>
@@ -177,7 +186,9 @@ onMounted(reload)
           />
         </van-cell-group>
         <div class="upgrade__popup-actions">
-          <van-button round block type="primary" native-type="submit" :loading="submitting">提交报名</van-button>
+          <van-button round block type="primary" native-type="submit" :loading="submitting"
+            >提交报名</van-button
+          >
         </div>
       </van-form>
     </van-popup>
@@ -185,21 +196,48 @@ onMounted(reload)
 </template>
 
 <style scoped>
-.upgrade__title { margin-bottom: 8px; font-size: 15px; font-weight: 600; }
+.upgrade__title {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.upgrade__conditions { padding-left: 18px; margin: 0; line-height: 1.7; }
+.upgrade__conditions {
+  padding-left: 18px;
+  margin: 0;
+  line-height: 1.7;
+}
 
-.upgrade__conditions li { margin-bottom: 2px; }
+.upgrade__conditions li {
+  margin-bottom: 2px;
+}
 
-.upgrade__actions { margin-bottom: 12px; }
+.upgrade__actions {
+  margin-bottom: 12px;
+}
 
-.upgrade__school { font-size: 15px; font-weight: 600; }
+.upgrade__school {
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.upgrade__line { margin-top: 4px; }
+.upgrade__line {
+  margin-top: 4px;
+}
 
-.upgrade__remark { margin-top: 8px; line-height: 1.5; }
+.upgrade__remark {
+  margin-top: 8px;
+  line-height: 1.5;
+}
 
-.upgrade__popup-title { padding: 14px 16px 6px; font-size: 16px; font-weight: 600; text-align: center; }
+.upgrade__popup-title {
+  padding: 14px 16px 6px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
 
-.upgrade__popup-actions { padding: 8px 16px 20px; }
+.upgrade__popup-actions {
+  padding: 8px 16px 20px;
+}
 </style>

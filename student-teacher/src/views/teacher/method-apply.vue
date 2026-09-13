@@ -20,7 +20,12 @@ const userStore = useUserStore()
 /** 教师工号；0 = 业务身份未解析成功 */
 const teacherId = computed(() => userStore.businessId)
 
-const { data: applies, loading, error, reload } = useAsyncData<ExamApply[]>(
+const {
+  data: applies,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ExamApply[]>(
   () => (teacherId.value ? listMyExamApplies(teacherId.value) : Promise.resolve([])),
   [],
 )
@@ -36,8 +41,12 @@ const showCoursePicker = ref(false)
 const submitting = ref(false)
 const form = reactive({ courseId: 0, applyType: EXAM_METHOD_OPTIONS[0] as string, reason: '' })
 
-const courseText = computed(() => courses.value.find((item) => item.id === form.courseId)?.name ?? '')
-const courseColumns = computed(() => courses.value.map((item) => ({ text: item.name, value: item.id })))
+const courseText = computed(
+  () => courses.value.find((item) => item.id === form.courseId)?.name ?? '',
+)
+const courseColumns = computed(() =>
+  courses.value.map((item) => ({ text: item.name, value: item.id })),
+)
 
 function openForm() {
   form.courseId = courses.value[0]?.id ?? 0
@@ -54,7 +63,9 @@ function openCoursePicker() {
   showCoursePicker.value = true
 }
 
-function onCourseConfirm(payload: { selectedOptions?: Array<{ value?: string | number } | undefined> }) {
+function onCourseConfirm(payload: {
+  selectedOptions?: Array<{ value?: string | number } | undefined>
+}) {
   form.courseId = Number(payload.selectedOptions?.[0]?.value ?? 0)
   showCoursePicker.value = false
 }
@@ -125,7 +136,11 @@ onMounted(() => {
       <van-empty v-else-if="applies.length === 0" description="还没有考核方式申报记录" />
 
       <template v-else>
-        <div v-for="item in applies" :key="item.id ?? `${item.courseId}-${item.createTime}`" class="st-card">
+        <div
+          v-for="item in applies"
+          :key="item.id ?? `${item.courseId}-${item.createTime}`"
+          class="st-card"
+        >
           <div class="st-row">
             <span class="apply__course">{{ item.courseName || `课程#${item.courseId}` }}</span>
             <van-tag :type="AUDIT_STATUS_TYPE[item.status ?? ''] || 'primary'">
@@ -142,7 +157,8 @@ onMounted(() => {
       </template>
 
       <div class="st-card st-muted apply__note">
-        申报提交后由教研室 → 系主任 → 教务处逐级审核（审核在后台管理端完成），审核结果会同步到本页状态。
+        申报提交后由教研室 → 系主任 →
+        教务处逐级审核（审核在后台管理端完成），审核结果会同步到本页状态。
       </div>
     </template>
 
@@ -151,22 +167,46 @@ onMounted(() => {
       <div class="apply__form-title">新增考核方式申报</div>
       <van-form class="apply__form" @submit="onSubmit">
         <van-cell-group inset>
-          <van-field readonly is-link name="course" label="课程" placeholder="请选择课程"
-            :model-value="courseText" :rules="[{ required: true, message: '请选择课程' }]"
-            @click="openCoursePicker" />
-          <van-field name="applyType" label="考核方式" :model-value="form.applyType"
-            :rules="[{ required: true, message: '请选择考核方式' }]">
+          <van-field
+            readonly
+            is-link
+            name="course"
+            label="课程"
+            placeholder="请选择课程"
+            :model-value="courseText"
+            :rules="[{ required: true, message: '请选择课程' }]"
+            @click="openCoursePicker"
+          />
+          <van-field
+            name="applyType"
+            label="考核方式"
+            :model-value="form.applyType"
+            :rules="[{ required: true, message: '请选择考核方式' }]"
+          >
             <template #input>
               <van-radio-group v-model="form.applyType" direction="horizontal">
-                <van-radio v-for="method in EXAM_METHOD_OPTIONS" :key="method" :name="method" shape="dot">
+                <van-radio
+                  v-for="method in EXAM_METHOD_OPTIONS"
+                  :key="method"
+                  :name="method"
+                  shape="dot"
+                >
                   {{ method }}
                 </van-radio>
               </van-radio-group>
             </template>
           </van-field>
-          <van-field v-model="form.reason" name="reason" label="申请理由" type="textarea" rows="3"
-            autosize maxlength="300" placeholder="请说明本课程采用该考核方式的理由"
-            :rules="[{ required: true, message: '请填写申请理由' }]" />
+          <van-field
+            v-model="form.reason"
+            name="reason"
+            label="申请理由"
+            type="textarea"
+            rows="3"
+            autosize
+            maxlength="300"
+            placeholder="请说明本课程采用该考核方式的理由"
+            :rules="[{ required: true, message: '请填写申请理由' }]"
+          />
         </van-cell-group>
         <div class="apply__submit">
           <van-button round block type="primary" native-type="submit" :loading="submitting">
@@ -180,20 +220,52 @@ onMounted(() => {
     </van-popup>
 
     <van-popup v-model:show="showCoursePicker" position="bottom" round>
-      <van-picker title="选择课程" :columns="courseColumns" :model-value="[form.courseId]"
-        @confirm="onCourseConfirm" @cancel="showCoursePicker = false" />
+      <van-picker
+        title="选择课程"
+        :columns="courseColumns"
+        :model-value="[form.courseId]"
+        @confirm="onCourseConfirm"
+        @cancel="showCoursePicker = false"
+      />
     </van-popup>
   </div>
 </template>
 
 <style scoped>
-.apply__add { margin-bottom: 10px; }
-.apply__course { font-size: 15px; font-weight: 600; }
-.apply__type { justify-content: flex-start; gap: 8px; margin-top: 8px; }
-.apply__reason { margin-top: 8px; font-size: 13px; line-height: 1.6; }
-.apply__time { margin-top: 8px; }
-.apply__note { line-height: 1.6; }
-.apply__form-title { padding: 14px 0; font-size: 15px; font-weight: 600; text-align: center; }
-.apply__submit { margin: 16px; }
-.apply__tip { margin: 0 16px 16px; text-align: center; }
+.apply__add {
+  margin-bottom: 10px;
+}
+.apply__course {
+  font-size: 15px;
+  font-weight: 600;
+}
+.apply__type {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.apply__reason {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.apply__time {
+  margin-top: 8px;
+}
+.apply__note {
+  line-height: 1.6;
+}
+.apply__form-title {
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+.apply__submit {
+  margin: 16px;
+}
+.apply__tip {
+  margin: 0 16px 16px;
+  text-align: center;
+}
 </style>

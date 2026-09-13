@@ -15,14 +15,24 @@ import { pageClassrooms } from '@/api/classroom'
 import type { Classroom } from '@/api/classroom'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
-import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, CLASSROOM_APPLY_STATUS_TYPE, TIME_SLOT_OPTIONS } from '@/constants/dict'
+import {
+  AUDIT_STATUS_TEXT,
+  AUDIT_STATUS_TYPE,
+  CLASSROOM_APPLY_STATUS_TYPE,
+  TIME_SLOT_OPTIONS,
+} from '@/constants/dict'
 import { formatDate, todayStr } from '@/utils/format'
 
 const userStore = useUserStore()
 const teacherId = computed(() => userStore.businessId)
 const refreshing = ref(false)
 
-const { data: adjusts, loading, error, reload } = useAsyncData<CourseAdjust[]>(
+const {
+  data: adjusts,
+  loading,
+  error,
+  reload,
+} = useAsyncData<CourseAdjust[]>(
   () => (teacherId.value ? listMyCourseAdjusts() : Promise.resolve([])),
   [],
 )
@@ -73,7 +83,9 @@ const form = reactive({
   reason: '',
 })
 
-const courseText = computed(() => courses.value.find((item) => item.id === form.courseId)?.name ?? '')
+const courseText = computed(
+  () => courses.value.find((item) => item.id === form.courseId)?.name ?? '',
+)
 const classText = computed(() => classes.value.find((item) => item.id === form.classId)?.name ?? '')
 const roomText = computed(() => {
   const room = rooms.value.find((item) => item.id === form.classroomId)
@@ -407,7 +419,12 @@ onMounted(reload)
       <van-picker
         v-else
         :columns="courseColumns"
-        @confirm="(payload: PickerPayload) => { form.courseId = pickId(payload); showCoursePicker = false }"
+        @confirm="
+          (payload: PickerPayload) => {
+            form.courseId = pickId(payload)
+            showCoursePicker = false
+          }
+        "
         @cancel="showCoursePicker = false"
       />
     </van-popup>
@@ -417,7 +434,12 @@ onMounted(reload)
       <van-picker
         v-else
         :columns="classColumns"
-        @confirm="(payload: PickerPayload) => { form.classId = pickId(payload); showClassPicker = false }"
+        @confirm="
+          (payload: PickerPayload) => {
+            form.classId = pickId(payload)
+            showClassPicker = false
+          }
+        "
         @cancel="showClassPicker = false"
       />
     </van-popup>
@@ -427,7 +449,12 @@ onMounted(reload)
       <van-picker
         v-else
         :columns="roomColumns"
-        @confirm="(payload: PickerPayload) => { form.classroomId = pickId(payload); showRoomPicker = false }"
+        @confirm="
+          (payload: PickerPayload) => {
+            form.classroomId = pickId(payload)
+            showRoomPicker = false
+          }
+        "
         @cancel="showRoomPicker = false"
       />
     </van-popup>

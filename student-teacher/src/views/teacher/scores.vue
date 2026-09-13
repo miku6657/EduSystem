@@ -16,6 +16,7 @@ import type { PageResult } from '@/types/api'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
 import { SCORE_STATUS_OPTIONS } from '@/constants/dict'
+import { exportToExcel, timestampedFileName } from '@/utils/excel'
 
 const userStore = useUserStore()
 /** 教师工号；0 = 业务身份未解析成功（成绩接口按考试维度，允许确认后继续录入） */
@@ -40,15 +41,21 @@ interface ScoreRow {
 
 const rows = ref<ScoreRow[]>([])
 
-const { data: exams, error: examError, reload: reloadExams } = useAsyncData<ExamInfo[]>(
-  async () => (await pageExams({ page: 1, pageSize: 50 })).list,
-  [],
-)
+const {
+  data: exams,
+  error: examError,
+  reload: reloadExams,
+} = useAsyncData<ExamInfo[]>(async () => (await pageExams({ page: 1, pageSize: 50 })).list, [])
 const { data: stat, reload: reloadStat } = useAsyncData<ExamScoreStat>(
   () => (examId.value ? getScoreStat(examId.value) : Promise.resolve({})),
   {},
 )
-const { data: pageData, loading, error, reload } = useAsyncData<PageResult<ExamScore>>(
+const {
+  data: pageData,
+  loading,
+  error,
+  reload,
+} = useAsyncData<PageResult<ExamScore>>(
   () =>
     examId.value
       ? pageScoresByExam({ page: page.value, pageSize, examId: examId.value })
@@ -94,12 +101,14 @@ const statItems = computed(() => {
   ]
 })
 const total = computed(() => pageData.value.total)
-const pageCount = computed(
-  () => Math.max(1, Math.ceil(total.value / (pageData.value.pageSize || pageSize))),
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(total.value / (pageData.value.pageSize || pageSize))),
 )
 /** 已修改（未保存）的行数 */
 const dirtyCount = computed(
-  () => rows.value.filter((row) => row.score !== row.originScore || row.status !== row.originStatus).length,
+  () =>
+    rows.value.filter((row) => row.score !== row.originScore || row.status !== row.originStatus)
+      .length,
 )
 
 function openExamPicker() {
@@ -110,7 +119,9 @@ function openExamPicker() {
   showExamPicker.value = true
 }
 
-function onExamConfirm(payload: { selectedOptions?: Array<{ value?: string | number } | undefined> }) {
+function onExamConfirm(payload: {
+  selectedOptions?: Array<{ value?: string | number } | undefined>
+}) {
   const id = Number(payload.selectedOptions?.[0]?.value ?? 0)
   showExamPicker.value = false
   if (!id || id === examId.value) {
@@ -203,6 +214,34 @@ async function retryProfile() {
   reloadExams()
 }
 
+/** 导出当前页成绩为 Excel（纯前端生成，仅导出当前页已加载的数据） */
+function onExport() {
+  if (rows.value.length === 0) {
+    showToast('当前没有可导出的成绩')
+    return
+  }
+  exportToExcel({
+    rows: rows.value.map((row) => ({
+      exam: examText.value,
+      student: row.name,
+      studentId: row.studentId,
+      score: row.score === '' ? '未录入/缺考' : row.score,
+      status:
+        SCORE_STATUS_OPTIONS.find((option) => option.value === row.status)?.text ?? row.status,
+    })),
+    columns: [
+      { label: '考试', key: 'exam' },
+      { label: '学生', key: 'student' },
+      { label: '学生ID', key: 'studentId' },
+      { label: '分数', key: 'score' },
+      { label: '状态', key: 'status' },
+    ],
+    fileName: timestampedFileName(examText.value || '成绩单'),
+    sheetName: '成绩单',
+  })
+  showToast('已导出 Excel')
+}
+
 onMounted(reloadExams)
 </script>
 
@@ -212,14 +251,22 @@ onMounted(reloadExams)
     <van-empty v-if="!teacherId && !skipProfileCheck" description="未解析到教师工号">
       <van-button round type="primary" size="small" @click="retryProfile">重新解析身份</van-button>
       <div class="score__skip">
-        <van-button round size="small" plain @click="skipProfileCheck = true">继续录入成绩</van-button>
+        <van-button round size="small" plain @click="skipProfileCheck = true"
+          >继续录入成绩</van-button
+        >
       </div>
     </van-empty>
 
     <template v-else>
       <div class="st-card">
-        <van-field readonly is-link label="考试" placeholder="请选择考试" :model-value="examText"
-          @click="openExamPicker" />
+        <van-field
+          readonly
+          is-link
+          label="考试"
+          placeholder="请选择考试"
+          :model-value="examText"
+          @click="openExamPicker"
+        />
       </div>
 
       <van-empty v-if="examError" image="error" :description="examError">
@@ -237,6 +284,12 @@ onMounted(reloadExams)
           </div>
         </div>
 
+        <div class="score__toolbar">
+          <van-button size="small" type="primary" plain @click="onExport">
+            导出当前页成绩
+          </van-button>
+        </div>
+
         <div v-if="loading" class="st-empty">
           <van-loading vertical>加载中…</van-loading>
         </div>
@@ -251,13 +304,27 @@ onMounted(reloadExams)
           <div v-for="row in rows" :key="row.studentId" class="st-card">
             <div class="st-row">
               <span class="score__name">{{ row.name }}</span>
-              <van-field v-model="row.score" type="number" placeholder="分数" input-align="right"
-                class="score__input" :disabled="row.status === 'ABSENT'" />
+              <van-field
+                v-model="row.score"
+                type="number"
+                placeholder="分数"
+                input-align="right"
+                class="score__input"
+                :disabled="row.status === 'ABSENT'"
+              />
             </div>
-            <van-radio-group v-model="row.status" direction="horizontal" class="score__status"
-              @change="() => onStatusChange(row)">
-              <van-radio v-for="option in SCORE_STATUS_OPTIONS" :key="option.value" :name="option.value"
-                shape="dot">
+            <van-radio-group
+              v-model="row.status"
+              direction="horizontal"
+              class="score__status"
+              @change="() => onStatusChange(row)"
+            >
+              <van-radio
+                v-for="option in SCORE_STATUS_OPTIONS"
+                :key="option.value"
+                :name="option.value"
+                shape="dot"
+              >
                 {{ option.text }}
               </van-radio>
             </van-radio-group>
@@ -266,33 +333,70 @@ onMounted(reloadExams)
           <!-- 分页 + 未保存提示 -->
           <div class="st-card">
             <div class="st-row">
-              <van-button size="small" plain :disabled="page <= 1" @click="goPage(page - 1)">上一页</van-button>
+              <van-button size="small" plain :disabled="page <= 1" @click="goPage(page - 1)"
+                >上一页</van-button
+              >
               <span class="st-muted">第 {{ page }} / {{ pageCount }} 页 · 共 {{ total }} 条</span>
-              <van-button size="small" plain :disabled="page >= pageCount" @click="goPage(page + 1)">
+              <van-button
+                size="small"
+                plain
+                :disabled="page >= pageCount"
+                @click="goPage(page + 1)"
+              >
                 下一页
               </van-button>
             </div>
-            <div v-if="dirtyCount > 0" class="st-muted score__dirty">已修改 {{ dirtyCount }} 条，尚未保存</div>
+            <div v-if="dirtyCount > 0" class="st-muted score__dirty">
+              已修改 {{ dirtyCount }} 条，尚未保存
+            </div>
           </div>
 
-          <van-button round block type="primary" :loading="saving" @click="onSave">保存修改</van-button>
+          <van-button round block type="primary" :loading="saving" @click="onSave"
+            >保存修改</van-button
+          >
         </template>
       </template>
     </template>
 
     <van-popup v-model:show="showExamPicker" position="bottom" round>
-      <van-picker title="选择考试" :columns="examColumns" :model-value="[examId]"
-        @confirm="onExamConfirm" @cancel="showExamPicker = false" />
+      <van-picker
+        title="选择考试"
+        :columns="examColumns"
+        :model-value="[examId]"
+        @confirm="onExamConfirm"
+        @cancel="showExamPicker = false"
+      />
     </van-popup>
   </div>
 </template>
 
 <style scoped>
-.score__skip { margin-top: 10px; }
-.score__stat { display: flex; justify-content: space-around; text-align: center; }
-.score__stat-value { font-size: 18px; font-weight: 600; }
-.score__name { flex: none; font-size: 15px; font-weight: 600; }
-.score__input { flex: 1; padding: 4px 0; }
-.score__status { margin-top: 10px; }
-.score__dirty { margin-top: 8px; text-align: center; }
+.score__skip {
+  margin-top: 10px;
+}
+.score__stat {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+.score__stat-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.score__name {
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+.score__input {
+  flex: 1;
+  padding: 4px 0;
+}
+.score__status {
+  margin-top: 10px;
+}
+.score__dirty {
+  margin-top: 8px;
+  text-align: center;
+}
 </style>
