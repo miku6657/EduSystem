@@ -177,20 +177,26 @@ CREATE TABLE base_term (
 -- 11. 教学任务表（任课关系：教师 - 课程 - 班级 - 学期）
 --     师生端「我的班级 / 我的课程」、教师只能给自己任教的课程录入成绩，都以本表为依据
 CREATE TABLE base_teaching_task (
-    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    teacher_id  BIGINT      NOT NULL COMMENT '教师ID',
-    course_id   BIGINT      NOT NULL COMMENT '课程ID',
-    class_id    BIGINT      NOT NULL COMMENT '班级ID',
-    term_id     BIGINT      DEFAULT NULL COMMENT '学期ID',
-    create_time DATETIME    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id            BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    teacher_id    BIGINT      NOT NULL COMMENT '教师ID',
+    course_id     BIGINT      NOT NULL COMMENT '课程ID',
+    class_id      BIGINT      NOT NULL COMMENT '班级ID',
+    term_id       BIGINT      DEFAULT NULL COMMENT '学期ID',
+    weekday       INT         DEFAULT NULL COMMENT '星期几（1=周一 … 7=周日，用于生成课表）',
+    start_section INT         DEFAULT NULL COMMENT '开始节次',
+    end_section   INT         DEFAULT NULL COMMENT '结束节次',
+    classroom_id  BIGINT      DEFAULT NULL COMMENT '上课教室ID',
+    weeks         VARCHAR(50) DEFAULT NULL COMMENT '上课周次，如 1-16周',
+    create_time   DATETIME    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time   DATETIME    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_teacher_course_class_term (teacher_id, course_id, class_id, term_id),
     KEY idx_teacher_id (teacher_id),
     KEY idx_course_id (course_id),
     KEY idx_class_id (class_id),
-    KEY idx_term_id (term_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教学任务表（任课关系）';
+    KEY idx_term_id (term_id),
+    KEY idx_weekday (weekday)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教学任务表（任课关系 + 上课时间）';
 
 -- ============ 三、考务管理表 ============
 
@@ -398,3 +404,27 @@ CREATE TABLE classroom_apply (
     KEY idx_applicant (applicant),
     KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室使用申请表';
+
+-- ============ 七、调课申请（教师发起 · 管理端审批） ============
+
+-- 1. 调课申请表
+CREATE TABLE course_adjust (
+    id             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    teacher_id     BIGINT       NOT NULL COMMENT '申请教师ID',
+    course_id      BIGINT       NOT NULL COMMENT '课程ID',
+    class_id       BIGINT       DEFAULT NULL COMMENT '班级ID',
+    origin_date    DATE         NOT NULL COMMENT '原上课日期',
+    origin_slot    VARCHAR(50)  NOT NULL COMMENT '原上课时段',
+    target_date    DATE         NOT NULL COMMENT '调整后上课日期',
+    target_slot    VARCHAR(50)  NOT NULL COMMENT '调整后上课时段',
+    classroom_id   BIGINT       DEFAULT NULL COMMENT '调整后教室ID（可为空）',
+    reason         VARCHAR(500) DEFAULT NULL COMMENT '调课原因',
+    status         VARCHAR(20)  DEFAULT '待审核' COMMENT '状态：待审核/已通过/已驳回/已撤销',
+    approve_remark VARCHAR(500) DEFAULT NULL COMMENT '审批意见',
+    create_time    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_teacher_id (teacher_id),
+    KEY idx_status (status),
+    KEY idx_target (target_date, target_slot)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='调课申请表';

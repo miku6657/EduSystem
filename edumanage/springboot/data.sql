@@ -91,14 +91,14 @@ INSERT INTO base_term (id, name, start_date, end_date, status) VALUES
 (1, '2025-2026学年第二学期', '2026-03-01', '2026-07-10', 0),
 (2, '2026-2027学年第一学期', '2026-09-01', '2027-01-20', 1);
 
--- 教学任务（任课关系，term_id=2 为当前学期）
-INSERT INTO base_teaching_task (id, teacher_id, course_id, class_id, term_id) VALUES
-(1, 1, 1, 1, 2),   -- 张伟：Java程序设计 - 软件技术2301班
-(2, 1, 1, 2, 2),   -- 张伟：Java程序设计 - 软件技术2302班
-(3, 2, 2, 1, 2),   -- 李娜：数据库原理 - 软件技术2301班
-(4, 3, 3, 1, 2),   -- 王强：Web前端开发 - 软件技术2301班
-(5, 3, 3, 2, 2),   -- 王强：Web前端开发 - 软件技术2302班
-(6, 4, 4, 3, 2);   -- 赵敏：会计基础 - 大数据与会计2301班
+-- 教学任务（任课关系 + 上课时间，term_id=2 为当前学期；weekday：1=周一 … 7=周日）
+INSERT INTO base_teaching_task (id, teacher_id, course_id, class_id, term_id, weekday, start_section, end_section, classroom_id, weeks) VALUES
+(1, 1, 1, 1, 2, 1, 1, 2, 1, '1-16周'),   -- 张伟：Java程序设计 - 软件技术2301班 周一 1-2 节
+(2, 1, 1, 2, 2, 2, 3, 4, 2, '1-16周'),   -- 张伟：Java程序设计 - 软件技术2302班 周二 3-4 节
+(3, 2, 2, 1, 2, 3, 3, 4, 3, '1-16周'),   -- 李娜：数据库原理 - 软件技术2301班 周三 3-4 节（机房）
+(4, 3, 3, 1, 2, 3, 5, 6, 3, '1-16周'),   -- 王强：Web前端开发 - 软件技术2301班 周三 5-6 节（机房）
+(5, 3, 3, 2, 2, 4, 1, 2, 2, '1-16周'),   -- 王强：Web前端开发 - 软件技术2302班 周四 1-2 节
+(6, 4, 4, 3, 2, 5, 3, 4, 5, '1-16周');   -- 赵敏：会计基础 - 大数据与会计2301班 周五 3-4 节
 
 -- ============ 三、考务数据 ============
 
@@ -194,3 +194,11 @@ INSERT INTO classroom_apply (id, room_id, applicant, class_name, apply_date, tim
  '班级学业规划分享会', '已通过', NOW() - INTERVAL 3 DAY),
 (3, 4, 'T001', '软件技术2302班', CURDATE() + INTERVAL 2 DAY, '第5-6节', '专题讲座',
  '邀请企业工程师做技术讲座', '待审核', NOW() - INTERVAL 2 HOUR);
+
+-- ============ 七、调课申请数据 ============
+-- 状态：待审核/已通过/已驳回/已撤销
+INSERT INTO course_adjust (id, teacher_id, course_id, class_id, origin_date, origin_slot, target_date, target_slot, classroom_id, reason, status, approve_remark, create_time) VALUES
+(1, 1, 1, 1, CURDATE() + INTERVAL 1 DAY, '第1-2节', CURDATE() + INTERVAL 2 DAY, '第3-4节', 1,
+ '参加校级教学能力比赛，申请顺延一天', '待审核', NULL, NOW() - INTERVAL 5 HOUR),
+(2, 2, 2, 1, CURDATE() + INTERVAL 2 DAY, '第3-4节', CURDATE() + INTERVAL 3 DAY, '第1-2节', 3,
+ '机房设备检修，调整到次日上机', '已通过', '同意调整', NOW() - INTERVAL 2 DAY);

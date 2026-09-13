@@ -35,6 +35,20 @@ public class TeachingTaskController {
     }
 
     /**
+     * 按班级查询教学任务（师生端「我的课表」）
+     * GET /api/teaching-tasks?classId=1&termId=2
+     */
+    @GetMapping(params = "classId")
+    public Result<List<TeachingTask>> listByClass(
+            @RequestParam Long classId,
+            @RequestParam(required = false) Long termId
+    ) {
+        return Result.success(
+                teachingTaskService.listByClass(classId, termId)
+        );
+    }
+
+    /**
      * 查询教学任务详情
      * GET /api/teaching-tasks/{id}
      */

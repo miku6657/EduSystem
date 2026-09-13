@@ -23,6 +23,15 @@ public interface TeachingTaskService extends IService<TeachingTask> {
     List<TeachingTask> listByTeacher(Long teacherId, Long termId);
 
     /**
+     * 查询某班级的全部教学任务（师生端「我的课表」数据来源）
+     *
+     * @param classId 班级ID
+     * @param termId  学期ID（可为空）
+     * @return 教学任务列表（含课程/教师/教室名称与上课时间）
+     */
+    List<TeachingTask> listByClass(Long classId, Long termId);
+
+    /**
      * 教师任教的班级列表（按班级去重）
      *
      * @param teacherId 教师ID
