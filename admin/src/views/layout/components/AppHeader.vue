@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, Bell, Expand, Fold } from '@element-plus/icons-vue'
-import { getTodoList } from '@/api/todo'
 import type { TodoItem } from '@/api/todo'
 import { useAppStore } from '@/stores/appStore'
 import { useUserStore } from '@/stores/user'
@@ -14,21 +13,12 @@ const userStore = useUserStore()
 
 const breadcrumbs = computed(() => route.matched.filter((item) => item.meta.title))
 const displayName = computed(
-  () => userStore.userInfo?.name || userStore.userInfo?.username || '系统管理员',
+  () => userStore.userInfo?.username || '系统管理员',
 )
 
 /** 审批待办（调课审批 + 教室申请审批） */
 const todos = ref<TodoItem[]>([])
 const todoCount = computed(() => todos.value.length)
-
-const loadTodos = async () => {
-  try {
-    todos.value = await getTodoList()
-  } catch {
-    // 错误提示已由请求层统一处理，待办显示为空
-    todos.value = []
-  }
-}
 
 /** 点击待办条目跳转到对应审核列表页 */
 const handleTodoCommand = (todo: TodoItem) => {
@@ -43,11 +33,6 @@ onMounted(() => {
     appStore.fetchCurrentTerm().catch(() => undefined)
   }
   // 顶部导航：加载审批待办提醒
-  loadTodos()
-  // 刷新页面后 token 仍在时，补拉用户信息（角色已在路由守卫中加载）
-  if (userStore.token && !userStore.userInfo) {
-    userStore.fetchUserInfo().catch(() => undefined)
-  }
 })
 
 const handleUserCommand = async (command: string) => {

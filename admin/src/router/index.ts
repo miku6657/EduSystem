@@ -13,6 +13,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '登录', requiresAuth: false },
   },
   {
+    path: '/cas/callback',
+    name: 'CasCallback',
+    component: () => import('@/views/login/CasCallback.vue'),
+    meta: { title: '统一身份认证', requiresAuth: false },
+  },
+  {
     path: '/',
     component: Layout,
     redirect: '/dashboard',
@@ -44,21 +50,13 @@ const router = createRouter({
 })
 
 // 登录守卫：无 token 且目标页需要登录时，强制跳转 /login
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
   const userStore = useUserStore()
   const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !userStore.token) {
     const query = to.fullPath !== '/' ? { redirect: to.fullPath } : undefined
     return { path: '/login', query }
-  }
-  // 已登录：进入布局页前先保证用户信息/角色就绪，供侧边栏按 roles 动态渲染
-  if (requiresAuth && userStore.token && !userStore.userInfo) {
-    try {
-      await userStore.fetchUserInfo()
-    } catch {
-      // 拉取失败时放行，错误提示已由请求层处理
-    }
   }
   if (to.path === '/login' && userStore.token) {
     return { path: '/dashboard' }

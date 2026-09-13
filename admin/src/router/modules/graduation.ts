@@ -7,7 +7,7 @@ const graduationRoutes: RouteRecordRaw[] = [
     path: 'graduation',
     name: 'Graduation',
     redirect: '/graduation/student-list',
-    meta: { title: '毕业审核', icon: CircleCheck, roles: ['admin', 'manager'] },
+    meta: { title: '毕业审核', icon: CircleCheck, roles: ['ADMIN', 'MANAGER'] },
     children: [
       {
         path: 'student-list',

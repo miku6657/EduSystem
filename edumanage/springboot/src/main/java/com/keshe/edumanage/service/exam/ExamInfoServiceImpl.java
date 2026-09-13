@@ -78,8 +78,13 @@ public class ExamInfoServiceImpl extends ServiceImpl<ExamInfoMapper, ExamInfo>
     }
 
     @Override
-    public Page<ExamInfo> pageExams(Page<ExamInfo> page, String name, Long termId,
-                                    String examType) {
+    public Page<ExamInfo> pageExams(
+            Page<ExamInfo> page,
+            String name,
+            Long termId,
+            Long courseId,
+            String examType
+    ) {
         return lambdaQuery()
                 .like(name != null && !name.isBlank(), ExamInfo::getName, name)
                 .eq(termId != null, ExamInfo::getTermId, termId)

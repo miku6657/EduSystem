@@ -1,78 +1,140 @@
 package com.keshe.edumanage.controller;
-import com.keshe.edumanage.common.result.Result;
+
 import com.keshe.edumanage.config.CasProperties;
 import com.keshe.edumanage.entity.system.User;
 import com.keshe.edumanage.service.CasService;
 import com.keshe.edumanage.service.UserService;
 import com.keshe.edumanage.util.JWTUtil;
-import com.keshe.edumanage.vo.LoginVO;
-import com.keshe.edumanage.vo.UserVO;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
-/**
- * CAS 单点登录控制器
- */
+
 @RestController
 @RequestMapping("/api/auth/cas")
 @RequiredArgsConstructor
 public class CasAuthController {
+
     private final CasProperties casProperties;
+
     private final CasService casService;
+
     private final UserService userService;
+
     private final JWTUtil jwtUtil;
 
+
     /**
-     * 发起 CAS 登录：重定向到 CAS Server 登录页
+     * 发起CAS登录
      */
     @GetMapping("/login")
     public void login(
             HttpServletResponse response
     ) throws IOException {
-        String redirectUrl = casProperties.getServerUrlPrefix()
-                + "/login?service="
-                + casProperties.getClientServiceUrl();
-        response.sendRedirect(redirectUrl);
+
+        String redirectUrl =
+                UriComponentsBuilder
+                        .fromHttpUrl(
+                                casProperties.getServerUrlPrefix()
+                                        + "/login"
+                        )
+                        .queryParam(
+                                "service",
+                                casProperties.getClientServiceUrl()
+                        )
+                        .build()
+                        .encode()
+                        .toUriString();
+
+
+        response.sendRedirect(
+                redirectUrl
+        );
     }
 
+
     /**
-     * CAS 登录回调：校验 ticket，签发 JWT
+     * CAS登录回调
      */
     @GetMapping("/callback")
-    public Result<LoginVO> callback(
-            @RequestParam("ticket") String ticket
-    ) {
-        String username = casService.validateTicket(ticket);
+    public void callback(
+            @RequestParam("ticket") String ticket,
+            HttpServletResponse response
+    ) throws IOException {
+
+        /**
+         * 1. 校验CAS ticket
+         */
+        String username =
+                casService.validateTicket(ticket);
+
+
         if (username == null) {
-            return Result.fail("CAS 票据校验失败");
+
+            response.sendRedirect(
+                    casProperties.getFrontendRedirectUrl()
+                            + "?error=CAS认证失败"
+            );
+
+            return;
         }
-        User user = userService.findByUsername(username);
+
+
+        /**
+         * 2. 查询业务系统用户
+         */
+        User user =
+                userService.findByUsername(
+                        username
+                );
+
+
         if (user == null) {
-            return Result.fail("用户不存在");
+
+            response.sendRedirect(
+                    casProperties.getFrontendRedirectUrl()
+                            + "?error=用户不存在"
+            );
+
+            return;
         }
-        String token = jwtUtil.generateToken(
-                user.getUsername(),
-                user.getRole()
+
+
+        /**
+         * 3. 生成业务系统JWT
+         */
+        String token =
+                jwtUtil.generateToken(
+                        user.getUsername(),
+                        user.getRole()
+                );
+
+
+        /**
+         * 4. 跳回Vue
+         */
+        String frontendUrl =
+                UriComponentsBuilder
+                        .fromHttpUrl(
+                                casProperties.getFrontendRedirectUrl()
+                        )
+                        .queryParam(
+                                "token",
+                                token
+                        )
+                        .build()
+                        .encode()
+                        .toUriString();
+
+
+        response.sendRedirect(
+                frontendUrl
         );
-        UserVO userVO = new UserVO();
-        userVO.setId(
-                user.getId()
-        );
-        userVO.setUsername(
-                user.getUsername()
-        );
-        userVO.setRole(
-                user.getRole()
-        );
-        LoginVO loginVO = new LoginVO();
-        loginVO.setToken(token);
-        loginVO.setUser(userVO);
-        return Result.success(loginVO);
     }
 }

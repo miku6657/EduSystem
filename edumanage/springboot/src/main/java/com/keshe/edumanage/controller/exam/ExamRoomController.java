@@ -4,28 +4,83 @@ import com.keshe.edumanage.common.result.Result;
 import com.keshe.edumanage.entity.exam.ExamRoom;
 import com.keshe.edumanage.service.exam.ExamRoomService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * 考场安排接口
- */
 @RestController
-@RequestMapping("/api/exam-room")
+@RequestMapping("/api/exam-rooms")
 @RequiredArgsConstructor
 public class ExamRoomController {
 
     private final ExamRoomService examRoomService;
 
     /**
-     * 查询某场考试的考场安排
+     * 查询考场列表
+     * GET /api/exam-rooms
      */
-    @GetMapping("/list-by-exam/{examId}")
-    public Result<List<ExamRoom>> listByExam(@PathVariable Long examId) {
-        return Result.success(examRoomService.listByExam(examId));
+    @GetMapping
+    public Result<List<ExamRoom>> list(
+            @RequestParam(required = false) Long examId
+    ){
+        if(examId != null){
+            return Result.success(
+                    examRoomService.listByExam(examId)
+            );
+        }
+        return Result.success(
+                examRoomService.list()
+        );
+    }
+
+    /**
+     * 查询考场详情
+     * GET /api/exam-rooms/{id}
+     */
+    @GetMapping("/{id}")
+    public Result<ExamRoom> getById(
+            @PathVariable Long id
+    ){
+        return Result.success(
+                examRoomService.getById(id)
+        );
+    }
+
+    /**
+     * 新增考场安排
+     * POST /api/exam-rooms
+     */
+    @PostMapping
+    public Result<Void> save(
+            @RequestBody ExamRoom examRoom
+    ){
+        examRoomService.save(examRoom);
+        return Result.success();
+    }
+
+    /**
+     * 修改考场安排
+     * PUT /api/exam-rooms/{id}
+     */
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody ExamRoom examRoom
+    ){
+        examRoom.setId(id);
+        examRoomService.updateById(examRoom);
+        return Result.success();
+    }
+
+    /**
+     * 删除考场安排
+     * DELETE /api/exam-rooms/{id}
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> remove(
+            @PathVariable Long id
+    ){
+        examRoomService.removeById(id);
+        return Result.success();
     }
 }

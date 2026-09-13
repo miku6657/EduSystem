@@ -7,7 +7,7 @@ const attendanceRoutes: RouteRecordRaw[] = [
     path: 'attendance',
     name: 'Attendance',
     redirect: '/attendance/log-list',
-    meta: { title: '考勤管理', icon: Clock, roles: ['admin'] },
+    meta: { title: '考勤管理', icon: Clock, roles: ['ADMIN'] },
     children: [
       {
         path: 'log-list',

@@ -7,7 +7,7 @@ const dashboardRoutes: RouteRecordRaw[] = [
     path: 'dashboard',
     name: 'Dashboard',
     component: () => import('@/views/dashboard/index.vue'),
-    meta: { title: '工作台', icon: HomeFilled, roles: ['admin'] },
+    meta: { title: '工作台', icon: HomeFilled, roles: ['ADMIN'] },
   },
 ]
 

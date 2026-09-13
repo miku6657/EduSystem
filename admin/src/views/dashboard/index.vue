@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Calendar, CircleCheck, Notebook, OfficeBuilding } from '@element-plus/icons-vue'
-import { getDashboardStatistics } from '@/api/dashboard'
 import type { DashboardStatistics } from '@/api/dashboard'
 
 const loading = ref(false)
@@ -36,18 +35,7 @@ const cards = computed(() => [
   },
 ])
 
-const loadData = async () => {
-  loading.value = true
-  try {
-    stats.value = await getDashboardStatistics()
-  } catch {
-    // 错误提示已由请求层统一处理
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(loadData)
+onMounted(() => {})
 </script>
 
 <template>

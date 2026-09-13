@@ -34,4 +34,5 @@ public interface ClassroomService extends IService<Classroom> {
      * @return 空闲教室列表
      */
     List<Classroom> listFreeClassrooms(Long campusId, String type);
+
 }

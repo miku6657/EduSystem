@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
+import { casLogin } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
@@ -42,6 +43,10 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
+const handleCasLogin = () => {
+  casLogin()
+}
 </script>
 
 <template>
@@ -53,6 +58,7 @@ const handleLogin = async () => {
       </div>
 
       <el-form
+        v-if="false"
         ref="formRef"
         :model="form"
         :rules="rules"
@@ -73,21 +79,22 @@ const handleLogin = async () => {
         </el-form-item>
         <el-form-item>
           <el-button
-            type="primary"
+            v-if="false"
             class="login-card__submit"
-            :loading="loading"
+            type="primary"
             @click="handleLogin"
-          >
-            登 录
-          </el-button>
+          >登录</el-button>
         </el-form-item>
       </el-form>
 
-      <el-alert
-        type="info"
-        :closable="false"
-        title="本地 mock：任意账号密码均可登录（演示：admin / 123456）"
-      />
+      <el-button
+        type="primary"
+        class="login-card__submit"
+        @click="handleCasLogin"
+      >
+        统一身份认证登录
+      </el-button>
+
     </div>
   </div>
 </template>
