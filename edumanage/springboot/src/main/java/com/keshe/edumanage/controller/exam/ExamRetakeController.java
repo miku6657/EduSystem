@@ -20,11 +20,15 @@ public class ExamRetakeController {
     private final ExamRetakeService examRetakeService;
 
     /**
-     * 学生申请重修
+     * 学生申请补考 / 重修
+     *
+     * @param type 类型：补考 / 重修（不传时按"重修"处理）
      */
     @PostMapping("/apply")
-    public Result<Void> apply(@RequestParam Long studentId, @RequestParam Long courseId) {
-        examRetakeService.applyRetake(studentId, courseId);
+    public Result<Void> apply(@RequestParam Long studentId,
+                              @RequestParam Long courseId,
+                              @RequestParam(required = false) String type) {
+        examRetakeService.applyRetake(studentId, courseId, type);
         return Result.success();
     }
 

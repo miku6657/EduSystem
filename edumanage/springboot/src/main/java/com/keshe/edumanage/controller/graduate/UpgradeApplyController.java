@@ -45,6 +45,14 @@ public class UpgradeApplyController {
     }
 
     /**
+     * 师生端：查询某位学生的报名记录（"我的报名"）
+     */
+    @GetMapping("/my/list")
+    public Result<List<UpgradeApply>> myList(@RequestParam Long studentId) {
+        return Result.success(upgradeApplyService.listByStudent(studentId));
+    }
+
+    /**
      * 根据ID查询报名详情
      */
     @GetMapping("/{id}")

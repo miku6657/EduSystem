@@ -72,6 +72,16 @@ public class TeacherAttendanceServiceImpl
     }
 
     @Override
+    public List<TeacherAttendance> listByTeacher(Long teacherId, LocalDate startDate, LocalDate endDate) {
+        return lambdaQuery()
+                .eq(TeacherAttendance::getTeacherId, teacherId)
+                .ge(startDate != null, TeacherAttendance::getAttendanceDate, startDate)
+                .le(endDate != null, TeacherAttendance::getAttendanceDate, endDate)
+                .orderByDesc(TeacherAttendance::getAttendanceDate)
+                .list();
+    }
+
+    @Override
     public Map<String, Object> statByDate(LocalDate date) {
         List<TeacherAttendance> list = listByDate(date);
         long totalTeachers = teacherService.count();
@@ -79,7 +89,8 @@ public class TeacherAttendanceServiceImpl
         Map<String, Object> result = new HashMap<>();
         result.put("total", totalTeachers);          // 教师总数
         result.put("checked", list.size());          // 已签到人数
-        result.put("absent", totalTeachers - list.size()); // 未签到人数
+        result.put("absent", totalTeachers - list.size());    // 未签到人数
+        result.put("unchecked", totalTeachers - list.size()); // 同上（字段名对齐师生端）
         return result;
     }
 }

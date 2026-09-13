@@ -63,4 +63,14 @@ public class AuthController {
         loginVO.setUser(userVO);
         return Result.success(loginVO);
     }
+
+    /**
+     * 退出登录
+     * <p>JWT 无状态，服务端不维护会话，退出即由前端清除本地 token；
+     * 该接口为语义化占位，便于前端统一调用。</p>
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout() {
+        return Result.success();
+    }
 }

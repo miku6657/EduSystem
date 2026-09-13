@@ -46,6 +46,14 @@ public class ExamApplyController {
     }
 
     /**
+     * 师生端：查询某位教师的申报记录（"我的申报"）
+     */
+    @GetMapping("/my/list")
+    public Result<List<ExamApply>> myList(@RequestParam Long teacherId) {
+        return Result.success(examApplyService.listByTeacher(teacherId));
+    }
+
+    /**
      * 根据ID查询申报详情
      */
     @GetMapping("/{id}")

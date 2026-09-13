@@ -43,4 +43,12 @@ public interface ExamApplyService extends IService<ExamApply> {
      * @return 申报列表
      */
     List<ExamApply> listForExport(String status);
+
+    /**
+     * 查询某位教师的申报记录（师生端「我的申报」）
+     *
+     * @param teacherId 教师ID
+     * @return 申报列表（按提交时间倒序）
+     */
+    List<ExamApply> listByTeacher(Long teacherId);
 }

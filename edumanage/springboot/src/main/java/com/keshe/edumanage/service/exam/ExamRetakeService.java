@@ -19,13 +19,14 @@ public interface ExamRetakeService extends IService<ExamRetake> {
     String TYPE_RETAKE = "重修";
 
     /**
-     * 学生申请重修（同一课程已有申请时不允许重复申请，
+     * 学生申请补考/重修（同一课程已有申请时不允许重复申请，
      * 且该课程历史成绩及格时不允许申请）
      *
      * @param studentId 学生ID
      * @param courseId  课程ID
+     * @param type      类型：补考 / 重修（为空时按"重修"处理）
      */
-    void applyRetake(Long studentId, Long courseId);
+    void applyRetake(Long studentId, Long courseId, String type);
 
     /**
      * 安排补考/重修考试（将记录关联到具体考试场次）

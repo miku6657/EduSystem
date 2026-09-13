@@ -44,6 +44,16 @@ public interface TeacherAttendanceService extends IService<TeacherAttendance> {
     List<TeacherAttendance> listByDate(LocalDate date);
 
     /**
+     * 查询某位教师在日期区间内的考勤记录（师生端「我的签到」）
+     *
+     * @param teacherId 教师ID
+     * @param startDate 开始日期（可为空）
+     * @param endDate   结束日期（可为空）
+     * @return 考勤记录列表（按日期倒序）
+     */
+    List<TeacherAttendance> listByTeacher(Long teacherId, LocalDate startDate, LocalDate endDate);
+
+    /**
      * 某天的教师出勤统计
      *
      * @param date 考勤日期

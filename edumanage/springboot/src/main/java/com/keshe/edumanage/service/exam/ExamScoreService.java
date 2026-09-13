@@ -16,6 +16,9 @@ public interface ExamScoreService extends IService<ExamScore> {
     /** 成绩状态：缺考 */
     String STATUS_ABSENT = "ABSENT";
 
+    /** 成绩状态：正常（已录入分数） */
+    String STATUS_NORMAL = "NORMAL";
+
     /** 及格分数线 */
     double PASS_SCORE = 60;
 

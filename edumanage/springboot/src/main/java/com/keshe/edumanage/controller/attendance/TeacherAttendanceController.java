@@ -52,6 +52,17 @@ public class TeacherAttendanceController {
     }
 
     /**
+     * 师生端：查询某位教师在日期区间内的考勤记录（"我的签到"）
+     */
+    @GetMapping("/list-by-teacher")
+    public Result<List<TeacherAttendance>> listByTeacher(
+            @RequestParam Long teacherId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
+        return Result.success(teacherAttendanceService.listByTeacher(teacherId, startDate, endDate));
+    }
+
+    /**
      * 某天的教师出勤统计（教师总数、已签到人数、未签到人数）
      */
     @GetMapping("/stat-by-date")

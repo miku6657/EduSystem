@@ -42,4 +42,12 @@ public interface UpgradeApplyService extends IService<UpgradeApply> {
      * @return 报名列表
      */
     List<UpgradeApply> listForReport(String applyStatus);
+
+    /**
+     * 查询某位学生的报名记录（师生端「我的报名」）
+     *
+     * @param studentId 学生ID
+     * @return 报名列表（按提交时间倒序）
+     */
+    List<UpgradeApply> listByStudent(Long studentId);
 }
