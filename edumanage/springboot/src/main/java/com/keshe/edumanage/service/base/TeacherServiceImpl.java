@@ -33,4 +33,14 @@ public class TeacherServiceImpl extends ServiceImpl<TeacherMapper, Teacher>
                 .eq(Teacher::getDepartmentId, departmentId)
                 .list();
     }
+
+    @Override
+    public Teacher getByTeacherNo(String teacherNo) {
+        if (teacherNo == null || teacherNo.isBlank()) {
+            return null;
+        }
+        return lambdaQuery()
+                .eq(Teacher::getTeacherNo, teacherNo)
+                .one();
+    }
 }

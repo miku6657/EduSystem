@@ -174,6 +174,24 @@ CREATE TABLE base_term (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学期信息表';
 
+-- 11. 教学任务表（任课关系：教师 - 课程 - 班级 - 学期）
+--     师生端「我的班级 / 我的课程」、教师只能给自己任教的课程录入成绩，都以本表为依据
+CREATE TABLE base_teaching_task (
+    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    teacher_id  BIGINT      NOT NULL COMMENT '教师ID',
+    course_id   BIGINT      NOT NULL COMMENT '课程ID',
+    class_id    BIGINT      NOT NULL COMMENT '班级ID',
+    term_id     BIGINT      DEFAULT NULL COMMENT '学期ID',
+    create_time DATETIME    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_teacher_course_class_term (teacher_id, course_id, class_id, term_id),
+    KEY idx_teacher_id (teacher_id),
+    KEY idx_course_id (course_id),
+    KEY idx_class_id (class_id),
+    KEY idx_term_id (term_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教学任务表（任课关系）';
+
 -- ============ 三、考务管理表 ============
 
 -- 1. 考试信息表（期末考试安排）

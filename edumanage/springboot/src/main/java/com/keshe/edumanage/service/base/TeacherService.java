@@ -33,4 +33,13 @@ public interface TeacherService extends IService<Teacher> {
      * @return 教师列表
      */
     List<Teacher> listByDepartment(Long departmentId);
+
+    /**
+     * 根据工号查询教师
+     * <p>师生端登录名即工号，用于解析当前登录人对应的 teacherId</p>
+     *
+     * @param teacherNo 教师工号
+     * @return 教师信息，不存在时返回 null
+     */
+    Teacher getByTeacherNo(String teacherNo);
 }

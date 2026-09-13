@@ -2,8 +2,11 @@ package com.keshe.edumanage.controller.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.keshe.edumanage.common.result.Result;
+import com.keshe.edumanage.entity.base.ClassInfo;
+import com.keshe.edumanage.entity.base.Course;
 import com.keshe.edumanage.entity.base.Teacher;
 import com.keshe.edumanage.service.base.TeacherService;
+import com.keshe.edumanage.service.base.TeachingTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +21,7 @@ import java.util.List;
 public class TeacherController {
 
     private final TeacherService teacherService;
+    private final TeachingTaskService teachingTaskService;
 
     /**
      * 分页条件查询教师（支持按姓名、类型、系部、教研室过滤）
@@ -49,6 +53,34 @@ public class TeacherController {
     @GetMapping("/list-by-department/{departmentId}")
     public Result<List<Teacher>> listByDepartment(@PathVariable Long departmentId) {
         return Result.success(teacherService.listByDepartment(departmentId));
+    }
+
+    /**
+     * 根据工号查询教师（师生端登录名即工号，用于解析 teacherId）
+     */
+    @GetMapping("/by-no/{teacherNo}")
+    public Result<Teacher> getByTeacherNo(@PathVariable String teacherNo) {
+        return Result.success(teacherService.getByTeacherNo(teacherNo));
+    }
+
+    /**
+     * 教师任教的班级（师生端「我的班级」，用于考勤点名等场景）
+     */
+    @GetMapping("/my-classes")
+    public Result<List<ClassInfo>> myClasses(
+            @RequestParam Long teacherId,
+            @RequestParam(required = false) Long termId) {
+        return Result.success(teachingTaskService.listMyClasses(teacherId, termId));
+    }
+
+    /**
+     * 教师任教的课程（师生端「我的课程」，用于教学日志、考核方式申报等场景）
+     */
+    @GetMapping("/my-courses")
+    public Result<List<Course>> myCourses(
+            @RequestParam Long teacherId,
+            @RequestParam(required = false) Long termId) {
+        return Result.success(teachingTaskService.listMyCourses(teacherId, termId));
     }
 
     /**
