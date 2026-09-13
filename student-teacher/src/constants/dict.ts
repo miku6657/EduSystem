@@ -69,6 +69,26 @@ export const MONITOR_ROLE_TEXT: Record<string, string> = {
 /** 考核方式（exam_apply.apply_type） */
 export const EXAM_METHOD_OPTIONS = ['闭卷', '开卷', '机考', '论文', '实操'] as const
 
+/** 教室申请状态（classroom_apply.status） */
+export const CLASSROOM_APPLY_STATUS_TYPE: Record<
+  string,
+  'warning' | 'success' | 'danger' | 'primary'
+> = {
+  待审核: 'warning',
+  已通过: 'success',
+  已驳回: 'danger',
+  已取消: 'primary',
+}
+
+/** 教室使用时段候选（与后端 time_slot 字段自由文本兼容） */
+export const TIME_SLOT_OPTIONS = [
+  '第1-2节',
+  '第3-4节',
+  '第5-6节',
+  '第7-8节',
+  '晚上',
+] as const
+
 /** 教材/教室等通用状态兜底文案 */
 export function dictText(map: Record<string, string>, key?: string | null, fallback = '—'): string {
   if (!key) {

@@ -232,6 +232,25 @@ const examRooms: MockRow[] = [
   { examId: 3, roomName: '实训楼B201机房' },
 ]
 
+/** 教室（与 data.sql 的 base_classroom 一致，用于教室申请选教室） */
+const classrooms: MockRow[] = [
+  { id: 1, roomNo: '教学楼A101', campusId: 1, type: '普通教室', area: 80, capacity: 60, status: '空闲' },
+  { id: 2, roomNo: '教学楼A102', campusId: 1, type: '普通教室', area: 80, capacity: 60, status: '空闲' },
+  { id: 3, roomNo: '实训楼B201机房', campusId: 1, type: '机房', area: 120, capacity: 50, status: '空闲' },
+  { id: 4, roomNo: '图书馆报告厅', campusId: 1, type: '多媒体', area: 300, capacity: 200, status: '空闲' },
+  { id: 5, roomNo: '教学楼C301', campusId: 2, type: '普通教室', area: 80, capacity: 55, status: '空闲' },
+]
+
+/** 教室申请（classroom_apply，状态：待审核/已通过/已驳回/已取消） */
+const classroomApplies: MockRow[] = [
+  { id: 1, roomId: 3, applicant: '2023005001', className: '软件技术2301班', applyDate: dayOffset(3), timeSlot: '第3-4节', purpose: '课程实训', reason: '数据库原理课程需要上机实训', status: '待审核', createTime: `${dayOffset(-1)} 10:20` },
+  { id: 2, roomId: 1, applicant: '2023005002', className: '软件技术2301班', applyDate: dayOffset(5), timeSlot: '第1-2节', purpose: '班级活动', reason: '班级学业规划分享会', status: '已通过', createTime: `${dayOffset(-3)} 15:40` },
+  { id: 3, roomId: 4, applicant: 'T001', className: '软件技术2302班', applyDate: dayOffset(2), timeSlot: '第5-6节', purpose: '专题讲座', reason: '邀请企业工程师做技术讲座', status: '待审核', createTime: `${dayOffset(-2)} 09:05` },
+]
+
+/** 当前登录名（模拟服务端 Authentication）：登录成功后记录，教室申请"我的申请"按它过滤 */
+let currentUsername = ''
+
 let sequence = 1000
 function nextId(): number {
   sequence += 1
@@ -349,6 +368,16 @@ function enrichMonitor(row: MockRow): MockRow {
   }
 }
 
+/** 教室申请补全教室名称，便于页面直接展示 */
+function enrichClassroomApply(row: MockRow): MockRow {
+  const room = classrooms.find((item) => item.id === row.roomId)
+  return {
+    ...row,
+    roomName: room?.roomNo ?? `教室#${row.roomId}`,
+    campusId: room?.campusId ?? null,
+  }
+}
+
 /** 学生登录名 → 学号（支持"学号"与 student01 这类别名） */
 function resolveStudentAccount(username: string): MockRow | undefined {
   const alias: Record<string, string> = { student01: '2023005001', student02: '2023005002', student03: '2023005003', student04: '2023005004' }
@@ -395,6 +424,7 @@ function handleApi(ctx: MockContext) {
       if (password !== DEMO_PASSWORD) {
         return fail('密码错误')
       }
+      currentUsername = student.studentNo
       return ok({
         token: `mock-token-student-${student.id}`,
         roles: ['student'],
@@ -407,6 +437,7 @@ function handleApi(ctx: MockContext) {
       if (password !== DEMO_PASSWORD) {
         return fail('密码错误')
       }
+      currentUsername = teacher.teacherNo
       return ok({
         token: `mock-token-teacher-${teacher.id}`,
         roles: ['teacher'],
@@ -421,60 +452,150 @@ function handleApi(ctx: MockContext) {
     return ok(null)
   }
 
-  /* ---------- 学期 / 身份解析 ---------- */
-  if (path === '/api/term/current') {
-    // 后端返回 Term 实体，这里两种形状都演示（前端已做归一化）
-    return ok({ id: 1, name: CURRENT_TERM, startDate: '2026-09-01', endDate: '2027-01-20' })
+  /* ---------- 学期（后端已由 /api/term/current 改为 /api/terms 列表，前端自行取"进行中"的） ---------- */
+  if (path === '/api/terms') {
+    return ok([
+      { id: 1, name: '2025-2026学年第二学期', startDate: '2026-03-01', endDate: '2026-07-10', status: 0 },
+      { id: 2, name: CURRENT_TERM, startDate: '2026-09-01', endDate: '2027-01-20', status: 1 },
+    ])
   }
 
-  if (path.startsWith('/api/student/by-no/')) {
-    const studentNo = decodeURIComponent(path.replace('/api/student/by-no/', ''))
-    const student = students.find((item) => item.studentNo === studentNo)
-    return student ? ok(student) : fail('未找到该学号对应的学生')
+  /* ---------- 学生 / 教师（复数 RESTful：?studentNo= / ?classId= / ?teacherNo= / ?departmentId= / 分页） ---------- */
+  if (path === '/api/students') {
+    const studentNo = String(query.studentNo ?? '')
+    if (studentNo) {
+      const student = students.find((item) => item.studentNo === studentNo)
+      return student ? ok(student) : fail('未找到该学号对应的学生')
+    }
+    const classId = Number(query.classId ?? 0)
+    if (classId) {
+      return ok(students.filter((item) => item.classId === classId))
+    }
+    return ok(paged(students, query))
   }
 
-  if (path.startsWith('/api/teacher/by-no/')) {
-    const teacherNo = decodeURIComponent(path.replace('/api/teacher/by-no/', ''))
-    const teacher = teachers.find((item) => item.teacherNo === teacherNo)
-    return teacher ? ok(teacher) : fail('未找到该工号对应的教师')
+  if (path === '/api/teachers') {
+    const teacherNo = String(query.teacherNo ?? '')
+    if (teacherNo) {
+      const teacher = teachers.find((item) => item.teacherNo === teacherNo)
+      return teacher ? ok(teacher) : fail('未找到该工号对应的教师')
+    }
+    const departmentId = Number(query.departmentId ?? 0)
+    if (departmentId) {
+      return ok(teachers.filter((item) => item.departmentId === departmentId))
+    }
+    return ok(paged(teachers, query))
   }
 
-  /* ---------- 基础数据（下拉选择用） ---------- */
-  if (path === '/api/class/page') {
+  const teacherClassesRoute = pathParams(/^\/api\/teachers\/(\d+)\/classes$/)
+  if (teacherClassesRoute) {
+    const teacherId = Number(teacherClassesRoute[1])
+    const ids = teacherClasses.filter((item) => item.teacherId === teacherId).map((item) => item.classId)
+    return ok(classes.filter((item) => ids.includes(item.id)))
+  }
+
+  const teacherCoursesRoute = pathParams(/^\/api\/teachers\/(\d+)\/courses$/)
+  if (teacherCoursesRoute) {
+    const teacherId = Number(teacherCoursesRoute[1])
+    const ids = teacherCourses.filter((item) => item.teacherId === teacherId).map((item) => item.courseId)
+    return ok(courses.filter((item) => ids.includes(item.id)))
+  }
+
+  /* ---------- 基础数据（下拉选择用，复数 RESTful） ---------- */
+  if (path === '/api/classes') {
     const keyword = String(query.keyword ?? '')
     const list = classes.filter((item) => !keyword || String(item.name).includes(keyword))
     return ok(paged(list, query))
   }
 
-  if (path === '/api/course/page') {
+  if (path === '/api/courses') {
     const keyword = String(query.keyword ?? '')
     const list = courses.filter((item) => !keyword || String(item.name).includes(keyword))
     return ok(paged(list, query))
   }
 
-  if (path === '/api/exam/page') {
+  if (path === '/api/exams') {
     const name = String(query.name ?? '')
     const list = exams.filter((item) => !name || String(item.name).includes(name))
     return ok(paged(list, query))
   }
 
-  const studentsByClass = pathParams(/^\/api\/student\/list-by-class\/(\d+)$/)
-  if (studentsByClass) {
-    const classId = Number(studentsByClass[1])
-    return ok(students.filter((item) => item.classId === classId))
+  /* ---------- 教室（申请时选教室） ---------- */
+  if (path === '/api/classrooms') {
+    const roomNo = String(query.roomNo ?? '')
+    const list = classrooms.filter((item) => !roomNo || String(item.roomNo).includes(roomNo))
+    return ok(paged(list, query))
   }
 
-  /* ---------- 教师自己的班级 / 课程（缺口接口，仅供 Mock 演示） ---------- */
-  if (path === '/api/teacher/my-classes') {
-    const teacherId = Number(query.teacherId ?? 0)
-    const ids = teacherClasses.filter((item) => item.teacherId === teacherId).map((item) => item.classId)
-    return ok(classes.filter((item) => ids.includes(item.id)))
+  if (path === '/api/classrooms/free') {
+    return ok(classrooms.filter((item) => item.status === '空闲'))
   }
 
-  if (path === '/api/teacher/my-courses') {
-    const teacherId = Number(query.teacherId ?? 0)
-    const ids = teacherCourses.filter((item) => item.teacherId === teacherId).map((item) => item.courseId)
-    return ok(courses.filter((item) => ids.includes(item.id)))
+  /* ---------- 教室申请：提交 / 审批列表 ---------- */
+  if (path === '/api/classroom-applies') {
+    const roomId = Number(body.roomId ?? 0)
+    if (!roomId) {
+      // 无 body 视为审批列表（GET）
+      const status = String(query.status ?? '')
+      const list = classroomApplies
+        .filter((item) => !status || item.status === status)
+        .sort((a, b) => Number(b.id) - Number(a.id))
+      return ok(list)
+    }
+    const applyDate = String(body.applyDate ?? '')
+    const timeSlot = String(body.timeSlot ?? '')
+    if (!applyDate || !timeSlot) {
+      return fail('请选择使用日期与时段')
+    }
+    const conflict = classroomApplies.some(
+      (item) =>
+        item.roomId === roomId &&
+        item.applyDate === applyDate &&
+        item.timeSlot === timeSlot &&
+        (item.status === '待审核' || item.status === '已通过'),
+    )
+    if (conflict) {
+      return fail('该时间段教室已被占用')
+    }
+    const created = {
+      id: nextId(),
+      roomId,
+      applicant: currentUsername,
+      className: body.className ? String(body.className) : null,
+      applyDate,
+      timeSlot,
+      purpose: body.purpose ? String(body.purpose) : null,
+      reason: body.reason ? String(body.reason) : null,
+      status: '待审核',
+      createTime: nowText(),
+    }
+    classroomApplies.push(created)
+    return ok(enrichClassroomApply(created), '申请已提交，等待审批')
+  }
+
+  if (path === '/api/classroom-applies/my') {
+    const list = classroomApplies
+      .filter((item) => item.applicant === currentUsername)
+      .sort((a, b) => Number(b.id) - Number(a.id))
+      .map(enrichClassroomApply)
+    return ok(list)
+  }
+
+  const cancelApply = pathParams(/^\/api\/classroom-applies\/(\d+)\/cancel$/)
+  if (cancelApply) {
+    const id = Number(cancelApply[1])
+    const row = classroomApplies.find((item) => item.id === id)
+    if (!row) {
+      return fail('申请记录不存在')
+    }
+    if (row.applicant !== currentUsername) {
+      return fail('只能撤回自己的申请')
+    }
+    if (row.status !== '待审核') {
+      return fail('仅待审核的申请可以撤回')
+    }
+    row.status = '已取消'
+    return ok(enrichClassroomApply(row), '已撤回申请')
   }
 
   /* ---------- 成绩 ---------- */
