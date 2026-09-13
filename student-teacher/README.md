@@ -133,7 +133,10 @@ src
 
 ## 与后端联调
 
-1. 用 `main` 分支的脚本建库：`schema.sql`（含 `base_teaching_task`、`classroom_apply`）→ `data.sql`（密码为 BCrypt、登录名即学号/工号、含教室申请种子数据）。
+1. **同步数据库（一条命令）**：`cd edumanage/springboot` → 执行 `sync-db.cmd`（Windows）或 `./sync-db.sh`。
+   该脚本会跑 `schema.sql`（27 张表，可重复执行）+ `data.sql`（演示数据，`INSERT IGNORE`，并把 seed 账号密码统一更新为 BCrypt）。
+   > ⚠️ 手工导入时必须带 `--default-character-set=utf8mb4`：Windows 上 mysql 客户端默认 `character_set_client=gbk`，
+   > 不加会把 UTF-8 的 SQL 按 GBK 解释，中文乱码、甚至因 `Invalid default value` 直接中断建表（脚本已内置该参数）。
 2. 启动后端（默认 `http://localhost:8080`）。
 3. 把 `.env.development` 的 `VITE_USE_MOCK` 改为 `false`，`/api` 请求即经 Vite 代理转发到后端。
 4. 用 `2023005001 / 123456`（学生）或 `T001 / 123456`（教师）登录，与后端种子账号一致。
@@ -143,6 +146,11 @@ src
 
 - 师生端：`vue-tsc -b` 零错误、`vite build` 通过；Mock 端到端冒烟 **19/19**（含新 RESTful 路径、教室申请提交/冲突拦截/撤回、学生与教师"我的申请"相互隔离）
 - 后端：`mvn -DskipTests compile` **BUILD SUCCESS**
+- **真实端到端联调（2026-09-13 实测）**：用临时 MySQL 实例 + 真实后端（连临时库）跑通
+  - 学生 `2023005001/123456`、教师 `T001/123456`、管理员 `admin/123456` 三者登录成功（BCrypt 生效）
+  - 错误密码被拒、无 token 访问受保护接口返回 401、学生越权审批返回 403
+  - 学生课表 / 成绩 / 教室申请（提交后 1→2 条，真实写库）/ 教师教学任务 / 监考（多考场用顿号合并）/ 我的调课（提交后 1→2 条）全部正常
+  - 过程中的三个真 bug 已修：`schema.sql` 因中文默认值 + 客户端 GBK 导致建表中断、`sync-db.cmd` 被 cmd 按 GBK 解析导致整行被当命令、`@PreAuthorize` 拒绝被全局异常兜底成 500（现为 403）
 
 ## 下一步
 

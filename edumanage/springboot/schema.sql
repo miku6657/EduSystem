@@ -4,6 +4,15 @@
 -- 字段与实体类 com.keshe.edumanage.entity.** 一一对应
 -- （MyBatis-Plus 自动完成 驼峰 ↔ 下划线 映射）
 -- 公共字段：id / create_time / update_time 来自 BaseEntity
+--
+-- 本脚本可重复执行：每张表前都会先 DROP TABLE IF EXISTS（会清空这些表的数据），
+-- 因此「重新同步脚本」= 直接再跑一遍即可，不会报「表已存在」而中断。
+-- 配合 data.sql 使用：schema.sql 建表 → data.sql 灌演示数据。
+-- ⚠️ 导入时必须指定客户端字符集：Windows 上 mysql 默认 character_set_client=gbk，
+--    不加参数会把本 UTF-8 文件按 GBK 解释，导致中文内容异常甚至建表失败：
+--      mysql --default-character-set=utf8mb4 --user=root -p < schema.sql
+--    （推荐直接用仓库自带的 sync-db.cmd / sync-db.sh，已带该参数）
+-- 状态类字段一律不使用中文默认值（由 Service 写入），避免受客户端字符集影响。
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS eduSYSTEM DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -12,6 +21,7 @@ USE eduSYSTEM;
 -- ============ 一、系统基础表 ============
 
 -- 1. 系统用户表（用户登录认证）
+DROP TABLE IF EXISTS sys_user;
 CREATE TABLE sys_user (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     username    VARCHAR(50)  NOT NULL                COMMENT '用户名',
@@ -25,6 +35,7 @@ CREATE TABLE sys_user (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
 
 -- 2. 系统角色表（管理员、教师、学生角色定义）
+DROP TABLE IF EXISTS sys_role;
 CREATE TABLE sys_role (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     role_name   VARCHAR(50) NOT NULL COMMENT '角色名称',
@@ -38,6 +49,7 @@ CREATE TABLE sys_role (
 -- ============ 二、教学基础数据表 ============
 
 -- 1. 校区信息表
+DROP TABLE IF EXISTS base_campus;
 CREATE TABLE base_campus (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name        VARCHAR(100) NOT NULL COMMENT '校区名称',
@@ -48,6 +60,7 @@ CREATE TABLE base_campus (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='校区信息表';
 
 -- 2. 系部信息表
+DROP TABLE IF EXISTS base_department;
 CREATE TABLE base_department (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name        VARCHAR(100) NOT NULL COMMENT '系部名称',
@@ -59,6 +72,7 @@ CREATE TABLE base_department (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系部信息表';
 
 -- 3. 教研室信息表
+DROP TABLE IF EXISTS base_teaching_group;
 CREATE TABLE base_teaching_group (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name          VARCHAR(100) NOT NULL COMMENT '教研室名称',
@@ -70,6 +84,7 @@ CREATE TABLE base_teaching_group (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教研室信息表';
 
 -- 4. 教师信息表（专职/校内兼职/校外兼职分类查询）
+DROP TABLE IF EXISTS base_teacher;
 CREATE TABLE base_teacher (
     id                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     teacher_no        VARCHAR(50)  NOT NULL COMMENT '教师工号',
@@ -88,6 +103,7 @@ CREATE TABLE base_teacher (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教师信息表';
 
 -- 5. 专业信息表
+DROP TABLE IF EXISTS base_major;
 CREATE TABLE base_major (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name          VARCHAR(100) NOT NULL COMMENT '专业名称',
@@ -101,6 +117,7 @@ CREATE TABLE base_major (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='专业信息表';
 
 -- 6. 班级信息表
+DROP TABLE IF EXISTS base_class;
 CREATE TABLE base_class (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name          VARCHAR(100) NOT NULL COMMENT '班级名称',
@@ -117,6 +134,7 @@ CREATE TABLE base_class (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='班级信息表';
 
 -- 7. 学生信息表
+DROP TABLE IF EXISTS base_student;
 CREATE TABLE base_student (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_no  VARCHAR(50)  NOT NULL COMMENT '学号',
@@ -133,6 +151,7 @@ CREATE TABLE base_student (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生信息表';
 
 -- 8. 课程信息表
+DROP TABLE IF EXISTS base_course;
 CREATE TABLE base_course (
     id                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     course_code       VARCHAR(50)  NOT NULL COMMENT '课程代码',
@@ -148,6 +167,7 @@ CREATE TABLE base_course (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程信息表';
 
 -- 9. 教室信息表（占用/空闲使用状况）
+DROP TABLE IF EXISTS base_classroom;
 CREATE TABLE base_classroom (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     room_no     VARCHAR(50)  NOT NULL COMMENT '教室编号',
@@ -163,6 +183,7 @@ CREATE TABLE base_classroom (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室信息表';
 
 -- 10. 学期信息表
+DROP TABLE IF EXISTS base_term;
 CREATE TABLE base_term (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name        VARCHAR(50)  NOT NULL COMMENT '学期名称',
@@ -176,6 +197,7 @@ CREATE TABLE base_term (
 
 -- 11. 教学任务表（任课关系：教师 - 课程 - 班级 - 学期）
 --     师生端「我的班级 / 我的课程」、教师只能给自己任教的课程录入成绩，都以本表为依据
+DROP TABLE IF EXISTS base_teaching_task;
 CREATE TABLE base_teaching_task (
     id            BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     teacher_id    BIGINT      NOT NULL COMMENT '教师ID',
@@ -201,6 +223,7 @@ CREATE TABLE base_teaching_task (
 -- ============ 三、考务管理表 ============
 
 -- 1. 考试信息表（期末考试安排）
+DROP TABLE IF EXISTS exam_info;
 CREATE TABLE exam_info (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     name        VARCHAR(100) NOT NULL COMMENT '考试名称',
@@ -220,6 +243,7 @@ CREATE TABLE exam_info (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试信息表';
 
 -- 2. 考试申请表（考核方式申报：教师申请，教研室/系主任/教务处审核）
+DROP TABLE IF EXISTS exam_apply;
 CREATE TABLE exam_apply (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     course_id   BIGINT       NOT NULL COMMENT '课程ID',
@@ -236,6 +260,7 @@ CREATE TABLE exam_apply (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试申请表';
 
 -- 3. 考场安排表（考试与教室关联）
+DROP TABLE IF EXISTS exam_room;
 CREATE TABLE exam_room (
     id           BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     exam_id      BIGINT   NOT NULL COMMENT '考试ID',
@@ -249,6 +274,7 @@ CREATE TABLE exam_room (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考场安排表';
 
 -- 4. 监考安排表（主监考/副监考）
+DROP TABLE IF EXISTS exam_monitor;
 CREATE TABLE exam_monitor (
     id           BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     exam_id      BIGINT      NOT NULL COMMENT '考试ID',
@@ -262,6 +288,7 @@ CREATE TABLE exam_monitor (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监考安排表';
 
 -- 5. 考试成绩表
+DROP TABLE IF EXISTS exam_score;
 CREATE TABLE exam_score (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     exam_id     BIGINT      NOT NULL COMMENT '考试ID',
@@ -276,6 +303,7 @@ CREATE TABLE exam_score (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='考试成绩表';
 
 -- 6. 补考重修表（补考安排 + 重修申请）
+DROP TABLE IF EXISTS exam_retake;
 CREATE TABLE exam_retake (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_id  BIGINT      NOT NULL COMMENT '学生ID',
@@ -293,6 +321,7 @@ CREATE TABLE exam_retake (
 -- ============ 四、毕业管理表 ============
 
 -- 1. 毕业资格审核表（学分审核 + 课程审核）
+DROP TABLE IF EXISTS graduate_check;
 CREATE TABLE graduate_check (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_id    BIGINT       NOT NULL COMMENT '学生ID',
@@ -308,6 +337,7 @@ CREATE TABLE graduate_check (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='毕业资格审核表';
 
 -- 2. 毕业生信息表（毕业证编号、上报库）
+DROP TABLE IF EXISTS graduate_student;
 CREATE TABLE graduate_student (
     id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_id      BIGINT       NOT NULL COMMENT '学生ID',
@@ -323,6 +353,7 @@ CREATE TABLE graduate_student (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='毕业生信息表';
 
 -- 3. 专升本报名表
+DROP TABLE IF EXISTS upgrade_apply;
 CREATE TABLE upgrade_apply (
     id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_id   BIGINT       NOT NULL COMMENT '学生ID',
@@ -340,6 +371,7 @@ CREATE TABLE upgrade_apply (
 -- ============ 五、考勤管理表 ============
 
 -- 1. 教师考勤表（签到 + 指纹考勤数据导入）
+DROP TABLE IF EXISTS teacher_attendance;
 CREATE TABLE teacher_attendance (
     id              BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     teacher_id      BIGINT      NOT NULL COMMENT '教师ID',
@@ -354,6 +386,7 @@ CREATE TABLE teacher_attendance (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教师考勤表';
 
 -- 2. 教学日志表（授课内容及学生出勤情况，最迟每周末提交）
+DROP TABLE IF EXISTS teaching_log;
 CREATE TABLE teaching_log (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     teacher_id    BIGINT       NOT NULL COMMENT '教师ID',
@@ -371,6 +404,7 @@ CREATE TABLE teaching_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教学日志表';
 
 -- 3. 学生考勤表（课程出勤记录）
+DROP TABLE IF EXISTS student_attendance;
 CREATE TABLE student_attendance (
     id              BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     student_id      BIGINT      NOT NULL COMMENT '学生ID',
@@ -388,6 +422,7 @@ CREATE TABLE student_attendance (
 -- ============ 六、教室申请（师生端发起 · 管理端审批） ============
 
 -- 1. 教室使用申请表
+DROP TABLE IF EXISTS classroom_apply;
 CREATE TABLE classroom_apply (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     room_id     BIGINT       NOT NULL COMMENT '教室ID',
@@ -397,7 +432,7 @@ CREATE TABLE classroom_apply (
     time_slot   VARCHAR(50)  NOT NULL COMMENT '使用时段',
     purpose     VARCHAR(200) DEFAULT NULL COMMENT '用途',
     reason      VARCHAR(500) DEFAULT NULL COMMENT '申请理由',
-    status      VARCHAR(20)  DEFAULT '待审核' COMMENT '状态：待审核/已通过/已驳回/已取消',
+    status      VARCHAR(20)  DEFAULT NULL COMMENT '状态：待审核/已通过/已驳回/已取消（由 Service 写入）',
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (id),
     KEY idx_room_date (room_id, apply_date),
@@ -408,6 +443,7 @@ CREATE TABLE classroom_apply (
 -- ============ 七、调课申请（教师发起 · 管理端审批） ============
 
 -- 1. 调课申请表
+DROP TABLE IF EXISTS course_adjust;
 CREATE TABLE course_adjust (
     id             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     teacher_id     BIGINT       NOT NULL COMMENT '申请教师ID',
@@ -419,7 +455,7 @@ CREATE TABLE course_adjust (
     target_slot    VARCHAR(50)  NOT NULL COMMENT '调整后上课时段',
     classroom_id   BIGINT       DEFAULT NULL COMMENT '调整后教室ID（可为空）',
     reason         VARCHAR(500) DEFAULT NULL COMMENT '调课原因',
-    status         VARCHAR(20)  DEFAULT '待审核' COMMENT '状态：待审核/已通过/已驳回/已撤销',
+    status         VARCHAR(20)  DEFAULT NULL COMMENT '状态：待审核/已通过/已驳回/已撤销（由 Service 写入）',
     approve_remark VARCHAR(500) DEFAULT NULL COMMENT '审批意见',
     create_time    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

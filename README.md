@@ -17,14 +17,23 @@ cd edumanage/springboot
 ./mvnw spring-boot:run          # 默认 8080 端口
 ```
 
-数据库需手工导入（脚本不会自动执行）：
+数据库初始化 / 同步（**脚本不会自动执行，需要跑一次**）：
 
 ```bash
-mysql -uroot -p < schema.sql    # 建库 eduSYSTEM + 24 张表
-mysql -uroot -p eduSYSTEM < data.sql   # 测试数据
+cd edumanage/springboot
+./sync-db.cmd          # Windows：双击或命令行执行
+./sync-db.sh           # macOS / Linux
 ```
 
-> 注意：`data.sql` 里的账号密码目前是明文，而登录接口用 BCrypt 校验，直接导入后无法登录，需先替换为 BCrypt 哈希。
+`sync-db` 会依次执行 `schema.sql`（建库 + 27 张表）与 `data.sql`（演示数据）。
+两个脚本都**可重复执行**：`schema.sql` 每张表前都会先 `DROP TABLE IF EXISTS`，
+`data.sql` 全部用 `INSERT IGNORE` 并把 seed 账号密码统一更新为 BCrypt ——
+所以 **每次 `git pull` 之后跑一次 `sync-db` 即可**，不会出现「表已存在 / 表不存在 / 字段不存在 / 登录失败」。
+
+> 默认账号密码为 `root/123456`（与 `application.yml` 一致），可用环境变量覆盖：
+> `set MYSQL_USER=... & set MYSQL_PWD=... & set MYSQL_HOST=...`
+>
+> 演示账号（密码均为 `123456`）：`admin`（管理员）、`T001`（教师张伟）、`2023005001`（学生王小明）。
 
 ### 后台管理端
 
@@ -44,7 +53,7 @@ npm install
 npm run dev                     # http://localhost:5174（mock 默认开启）
 ```
 
-演示账号：学生 `2023005001 / 123456`、教师 `T1001 / 123456`。联调方式同上，`.env.development` 已随仓库提供。
+演示账号：学生 `2023005001 / 123456`、教师 `T001 / 123456`（与 `data.sql` 种子数据一致）。联调方式同上，`.env.development` 已随仓库提供。
 
 ## 接口约定
 

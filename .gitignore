@@ -10,3 +10,6 @@ qodana.yaml
 # 前端依赖与构建产物（各子工程另有自己的 .gitignore，这里兜底）
 node_modules/
 dist/
+
+# 本地临时测试用的 MySQL 实例数据目录（仅用于验证 SQL 脚本，不入库）
+.mysqltest/
