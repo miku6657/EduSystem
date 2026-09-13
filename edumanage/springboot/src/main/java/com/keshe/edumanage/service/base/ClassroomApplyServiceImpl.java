@@ -3,6 +3,7 @@ package com.keshe.edumanage.service.base;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.keshe.edumanage.common.exception.BusinessException;
 import com.keshe.edumanage.entity.base.ClassroomApply;
 import com.keshe.edumanage.mapper.base.ClassroomApplyMapper;
 import com.keshe.edumanage.service.base.ClassroomApplyService;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 
 
@@ -27,6 +27,10 @@ public class ClassroomApplyServiceImpl
             LocalDate date,
             String timeSlot
     ){
+
+        if (roomId == null || date == null || timeSlot == null) {
+            return false;
+        }
 
         LambdaQueryWrapper<ClassroomApply> wrapper =
                 new LambdaQueryWrapper<>();
@@ -52,9 +56,9 @@ public class ClassroomApplyServiceImpl
 
         wrapper.in(
                 ClassroomApply::getStatus,
-                Arrays.asList(
-                        "待审核",
-                        "已通过"
+                List.of(
+                        STATUS_WAIT,
+                        STATUS_PASS
                 )
         );
 
@@ -74,7 +78,72 @@ public class ClassroomApplyServiceImpl
                         ClassroomApply::getApplicant,
                         username
                 )
+                .orderByDesc(
+                        ClassroomApply::getId
+                )
                 .list();
+
+    }
+
+
+
+    @Override
+    public List<ClassroomApply> listByStatus(
+            String status
+    ){
+
+        return lambdaQuery()
+                .eq(
+                        status != null && !status.isBlank(),
+                        ClassroomApply::getStatus,
+                        status
+                )
+                .orderByDesc(
+                        ClassroomApply::getId
+                )
+                .list();
+
+    }
+
+
+
+    @Override
+    public void cancel(
+            Long id,
+            String username
+    ){
+
+        ClassroomApply apply =
+                getById(id);
+
+
+        if (apply == null) {
+            throw new BusinessException(
+                    "申请记录不存在"
+            );
+        }
+
+
+        if (!apply.getApplicant().equals(username)) {
+            throw new BusinessException(
+                    "只能撤回自己的申请"
+            );
+        }
+
+
+        if (!STATUS_WAIT.equals(apply.getStatus())) {
+            throw new BusinessException(
+                    "仅待审核的申请可以撤回"
+            );
+        }
+
+
+        apply.setStatus(
+                STATUS_CANCEL
+        );
+
+
+        updateById(apply);
 
     }
 

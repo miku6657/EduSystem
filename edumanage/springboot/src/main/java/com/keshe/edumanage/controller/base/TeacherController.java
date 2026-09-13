@@ -74,30 +74,43 @@ public class TeacherController {
 
     /**
      * 根据工号查询教师（师生端登录名即工号，用于解析 teacherId）
+     * GET /api/teachers?teacherNo=T001
      */
-    @GetMapping("/by-no/{teacherNo}")
-    public Result<Teacher> getByTeacherNo(@PathVariable String teacherNo) {
-        return Result.success(teacherService.getByTeacherNo(teacherNo));
+    @GetMapping(params = "teacherNo")
+    public Result<Teacher> getByTeacherNo(
+            @RequestParam String teacherNo
+    ) {
+        return Result.success(
+                teacherService.getByTeacherNo(teacherNo)
+        );
     }
 
     /**
      * 教师任教的班级（师生端「我的班级」，用于考勤点名等场景）
+     * GET /api/teachers/{id}/classes
      */
-    @GetMapping("/my-classes")
+    @GetMapping("/{id}/classes")
     public Result<List<ClassInfo>> myClasses(
-            @RequestParam Long teacherId,
-            @RequestParam(required = false) Long termId) {
-        return Result.success(teachingTaskService.listMyClasses(teacherId, termId));
+            @PathVariable Long id,
+            @RequestParam(required = false) Long termId
+    ) {
+        return Result.success(
+                teachingTaskService.listMyClasses(id, termId)
+        );
     }
 
     /**
      * 教师任教的课程（师生端「我的课程」，用于教学日志、考核方式申报等场景）
+     * GET /api/teachers/{id}/courses
      */
-    @GetMapping("/my-courses")
+    @GetMapping("/{id}/courses")
     public Result<List<Course>> myCourses(
-            @RequestParam Long teacherId,
-            @RequestParam(required = false) Long termId) {
-        return Result.success(teachingTaskService.listMyCourses(teacherId, termId));
+            @PathVariable Long id,
+            @RequestParam(required = false) Long termId
+    ) {
+        return Result.success(
+                teachingTaskService.listMyCourses(id, termId)
+        );
     }
 
     /**

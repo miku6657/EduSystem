@@ -22,7 +22,8 @@ public class ClassroomApplyController {
      */
     @PostMapping
     public Result<Void> apply(
-            @RequestBody ClassroomApply apply
+            @RequestBody ClassroomApply apply,
+            Authentication authentication
     ) {
         boolean conflict =
                 classroomApplyService.checkConflict(
@@ -37,7 +38,14 @@ public class ClassroomApplyController {
             );
         }
 
-        apply.setStatus("待审核");
+        // 申请人一律以当前登录人为准，不信任请求体（否则可冒名提交）
+        apply.setId(null);
+        apply.setApplicant(
+                authentication.getName()
+        );
+        apply.setStatus(
+                ClassroomApplyService.STATUS_WAIT
+        );
 
         classroomApplyService.save(apply);
 
@@ -59,28 +67,62 @@ public class ClassroomApplyController {
     }
 
     /**
-     * 审批列表
+     * 审批列表（status 为空查全部）
      */
     @GetMapping
     public Result<List<ClassroomApply>> list(
             @RequestParam(required = false) String status
     ) {
         return Result.success(
-                classroomApplyService.list()
+                classroomApplyService.listByStatus(
+                        status
+                )
         );
     }
 
     /**
-     * 通过申请
+     * 撤回我的申请（仅本人、仅"待审核"可撤回）
+     * PUT /api/classroom-applies/{id}/cancel
+     */
+    @PutMapping("/{id}/cancel")
+    public Result<Void> cancel(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        classroomApplyService.cancel(
+                id,
+                authentication.getName()
+        );
+
+        return Result.success();
+    }
+
+    /**
+     * 通过申请（管理端）
      */
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> approve(
             @PathVariable Long id
     ) {
         ClassroomApply apply =
                 classroomApplyService.getById(id);
 
-        apply.setStatus("已通过");
+        if (apply == null) {
+            return Result.fail(
+                    "申请记录不存在"
+            );
+        }
+
+        if (!ClassroomApplyService.STATUS_WAIT.equals(apply.getStatus())) {
+            return Result.fail(
+                    "该申请已审批，请勿重复操作"
+            );
+        }
+
+        apply.setStatus(
+                ClassroomApplyService.STATUS_PASS
+        );
 
         classroomApplyService.updateById(apply);
 
@@ -88,7 +130,7 @@ public class ClassroomApplyController {
     }
 
     /**
-     * 驳回申请
+     * 驳回申请（管理端）
      */
     @PutMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
@@ -98,7 +140,21 @@ public class ClassroomApplyController {
         ClassroomApply apply =
                 classroomApplyService.getById(id);
 
-        apply.setStatus("已驳回");
+        if (apply == null) {
+            return Result.fail(
+                    "申请记录不存在"
+            );
+        }
+
+        if (!ClassroomApplyService.STATUS_WAIT.equals(apply.getStatus())) {
+            return Result.fail(
+                    "该申请已审批，请勿重复操作"
+            );
+        }
+
+        apply.setStatus(
+                ClassroomApplyService.STATUS_FAIL
+        );
 
         classroomApplyService.updateById(apply);
 

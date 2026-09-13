@@ -184,3 +184,13 @@ INSERT INTO student_attendance (id, student_id, course_id, attendance_date, stat
 (2, 2, 1, CURDATE() - INTERVAL 1 DAY, '正常'),
 (3, 3, 1, CURDATE() - INTERVAL 1 DAY, '缺勤'),
 (4, 4, 1, CURDATE() - INTERVAL 1 DAY, '正常');
+
+-- ============ 六、教室申请数据 ============
+-- applicant 与 sys_user.username 一致，师生端「我的申请」按登录名查询
+INSERT INTO classroom_apply (id, room_id, applicant, class_name, apply_date, time_slot, purpose, reason, status, create_time) VALUES
+(1, 3, '2023005001', '软件技术2301班', CURDATE() + INTERVAL 3 DAY, '第3-4节', '课程实训',
+ '数据库原理课程需要上机实训，申请机房使用', '待审核', NOW() - INTERVAL 1 DAY),
+(2, 1, '2023005002', '软件技术2301班', CURDATE() + INTERVAL 5 DAY, '第1-2节', '班级活动',
+ '班级学业规划分享会', '已通过', NOW() - INTERVAL 3 DAY),
+(3, 4, 'T001', '软件技术2302班', CURDATE() + INTERVAL 2 DAY, '第5-6节', '专题讲座',
+ '邀请企业工程师做技术讲座', '待审核', NOW() - INTERVAL 2 HOUR);

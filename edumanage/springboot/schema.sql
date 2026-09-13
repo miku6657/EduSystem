@@ -378,3 +378,23 @@ CREATE TABLE student_attendance (
     KEY idx_course_id (course_id),
     KEY idx_attendance_date (attendance_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生考勤表';
+
+-- ============ 六、教室申请（师生端发起 · 管理端审批） ============
+
+-- 1. 教室使用申请表
+CREATE TABLE classroom_apply (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    room_id     BIGINT       NOT NULL COMMENT '教室ID',
+    applicant   VARCHAR(50)  NOT NULL COMMENT '申请人登录名（与 sys_user.username 一致）',
+    class_name  VARCHAR(100) DEFAULT NULL COMMENT '申请班级',
+    apply_date  DATE         NOT NULL COMMENT '使用日期',
+    time_slot   VARCHAR(50)  NOT NULL COMMENT '使用时段',
+    purpose     VARCHAR(200) DEFAULT NULL COMMENT '用途',
+    reason      VARCHAR(500) DEFAULT NULL COMMENT '申请理由',
+    status      VARCHAR(20)  DEFAULT '待审核' COMMENT '状态：待审核/已通过/已驳回/已取消',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_room_date (room_id, apply_date),
+    KEY idx_applicant (applicant),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室使用申请表';
