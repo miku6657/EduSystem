@@ -1,23 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, MagicStick, RefreshLeft } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { autoArrangeExam, type AutoArrangeResult } from '@/api/exam'
+import { getTermList, type Term } from '@/api/term'
 
 /* ==================== 筛选条件 ==================== */
 
-const TERM_OPTIONS = [
-  '2025-2026学年第一学期',
-  '2025-2026学年第二学期',
-  '2026-2027学年第一学期',
-  '2026-2027学年第二学期',
-  '2027-2028学年第一学期',
-]
-
 const GRADE_OPTIONS = ['2023级', '2024级', '2025级', '2026级']
 
-const term = ref('2026-2027学年第二学期')
+const terms = ref<Term[]>([])
+const term = ref('')
 const grade = ref('2024级')
 
 /* ==================== 排考状态 ==================== */
@@ -49,12 +43,12 @@ async function handleArrange() {
   arranging.value = true
   result.value = null
   try {
-    result.value = await autoArrangeExam({ term: term.value, grade: grade.value })
-    if (result.value.summary.conflictCount > 0) {
-      ElMessage.warning(`自动排考完成，发现 ${result.value.summary.conflictCount} 条冲突，请人工处理后再发布`)
-    } else {
-      ElMessage.success('自动排考完成，未发现冲突')
-    }
+    await autoArrangeExam({
+      examInfo: { term: term.value, grade: grade.value },
+      classroomIds: [],
+      monitorTeacherIds: [],
+    })
+    ElMessage.success('自动排考请求已提交')
   } catch {
     // 错误提示已由请求层统一处理
   } finally {
@@ -65,6 +59,16 @@ async function handleArrange() {
 function resetArrange() {
   result.value = null
 }
+
+onMounted(async () => {
+  try {
+    terms.value = await getTermList()
+    const currentTerm = terms.value.find((item) => item.status === 1) ?? terms.value[0]
+    term.value = currentTerm?.name ?? ''
+  } catch {
+    // 错误提示已由请求层统一处理
+  }
+})
 
 /* ==================== Excel 导出 ==================== */
 
@@ -128,7 +132,7 @@ function tableRowClass({ row }: { row: AutoArrangeResult['items'][number] }) {
       <el-form inline class="filter-form">
         <el-form-item label="学期">
           <el-select v-model="term" style="width: 240px">
-            <el-option v-for="t in TERM_OPTIONS" :key="t" :label="t" :value="t" />
+            <el-option v-for="item in terms" :key="item.id" :label="item.name" :value="item.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="年级">

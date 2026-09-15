@@ -6,7 +6,7 @@ const SIDEBAR_KEY = 'app:sidebar-collapsed'
 
 export const useAppStore = defineStore('app', {
   state: () => ({
-    /** 当前学期（顶部导航展示，mock 接口 /api/term/current） */
+    /** 当前学期（顶部导航展示，从 /api/terms 列表中选取） */
     currentTerm: '',
     /** 侧边栏是否折叠 */
     sidebarCollapsed: getStorage<boolean>(SIDEBAR_KEY) ?? false,
@@ -15,7 +15,7 @@ export const useAppStore = defineStore('app', {
     /** 获取当前学期 */
     async fetchCurrentTerm() {
       const term = await getCurrentTerm()
-      this.currentTerm = term
+      this.currentTerm = term?.name ?? ''
       return term
     },
 

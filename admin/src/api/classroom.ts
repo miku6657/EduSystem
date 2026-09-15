@@ -1,18 +1,16 @@
 import { http } from '@/utils/request'
-import type { PageResult } from '@/types/api'
-
 /** 教室资源（申请教室时的候选教室） */
 export interface ClassroomItem {
   id: number
-  name: string
-  building: string
   roomNo: string
-  capacity: number
-  /** 教室类型：普通教室 / 多媒体教室 / 机房 / 报告厅等 */
+  campusId: number
   type: string
+  area?: number
+  capacity?: number
+  status?: string
 }
 
-/** 教室占用 / 申请日历事件（按天粒度，来自 /classroom/occupancy） */
+/** 教室占用 / 申请日历事件（按天粒度） */
 export interface ClassroomCalendarEvent {
   id: string
   roomId: number
@@ -73,50 +71,38 @@ export interface CreateClassroomApplyParams {
   applicant?: string
 }
 
-/** 教室列表（日历顶部下拉选择） */
-export function getClassroomList() {
-  return http.get<ClassroomItem[]>('/classroom/list')
-}
-
-/** 全校教室在某日期范围的占用总览（PC 日历月视图，管理端只读） */
-export function getClassroomOccupancy(params: {
-  /** 开始日期 YYYY-MM-DD */
-  start: string
-  /** 结束日期 YYYY-MM-DD */
-  end: string
-}) {
-  return http.get<ClassroomCalendarEvent[]>('/classroom/occupancy', params)
+/** 分页查询教室 */
+export function getClassroomList(params: { pageNo?: number; pageSize?: number } = {}) {
+  return http.get<{ records: ClassroomItem[]; total: number }>('/classrooms', {
+    pageNo: params.pageNo ?? 1,
+    pageSize: params.pageSize ?? 10,
+  })
 }
 
 /** 提交教室申请（仅师生端调用；管理端代码不再发起申请，此函数仅供后续师生端联调参考） */
 export function createClassroomApply(data: CreateClassroomApplyParams) {
-  return http.post<ClassroomApplyRecord>('/classroom/apply', data)
+  return http.post<ClassroomApplyRecord>('/classroom-applies', data)
 }
 
-/** 我的教室申请记录（分页；仅师生端使用） */
-export function getMyClassroomApplies(params: Record<string, unknown>) {
-  return http.get<PageResult<ClassroomApplyRecord>>('/classroom-apply/my/list', params)
-}
-
-/** 取消教室申请（仅师生端使用；后端校验：提交后 30 分钟内不可取消） */
-export function cancelClassroomApply(id: number) {
-  return http.post<{ id: number; status: ClassroomApplyStatus }>('/classroom-apply/cancel', { id })
+/** 我的教室申请记录（仅师生端使用） */
+export function getMyClassroomApplies() {
+  return http.get<ClassroomApplyRecord[]>('/classroom-applies/my')
 }
 
 /** 管理端：审批状态筛选项（'' 表示全部） */
 export type ClassroomApprovalFilter = '' | '待审核' | '已通过' | '已驳回'
 
-/** 管理端：待审批列表（GET /classroom/approval/list） */
+/** 管理端：待审批列表（GET /classroom-applies） */
 export function getClassroomApprovalList(params?: { status?: ClassroomApprovalFilter }) {
-  return http.get<ClassroomApplyRecord[]>('/classroom/approval/list', params)
+  return http.get<ClassroomApplyRecord[]>('/classroom-applies', params)
 }
 
-/** 管理端：通过教室申请（PUT /classroom/approve/{id}） */
+/** 管理端：通过教室申请（PUT /classroom-applies/{id}/approve） */
 export function approveClassroomApply(id: number) {
-  return http.put<ClassroomApplyRecord>(`/classroom/approve/${id}`)
+  return http.put<ClassroomApplyRecord>(`/classroom-applies/${id}/approve`)
 }
 
-/** 管理端：驳回教室申请（PUT /classroom/reject/{id}） */
+/** 管理端：驳回教室申请（PUT /classroom-applies/{id}/reject） */
 export function rejectClassroomApply(id: number) {
-  return http.put<ClassroomApplyRecord>(`/classroom/reject/${id}`)
+  return http.put<ClassroomApplyRecord>(`/classroom-applies/${id}/reject`)
 }

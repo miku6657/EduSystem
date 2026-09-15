@@ -1,4 +1,5 @@
 import axios from 'axios'
+import JSONbig from 'json-bigint'
 import type {
   AxiosError,
   AxiosRequestConfig,
@@ -8,6 +9,8 @@ import type {
 
 import type { ApiResult } from '@/types/api'
 import { getToken, removeStorage, removeToken } from '@/utils/storage'
+
+const jsonParser = JSONbig({ storeAsString: true })
 
 export class ApiError extends Error {
   code: number
@@ -22,6 +25,9 @@ export class ApiError extends Error {
 const instance = axios.create({
   baseURL: '/api',
   timeout: 15000,
+  transformResponse: [
+    (data) => (typeof data === 'string' ? jsonParser.parse(data) : data),
+  ],
 })
 
 /**

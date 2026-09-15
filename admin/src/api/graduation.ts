@@ -20,22 +20,30 @@ export interface GraduationStudent {
 
 /** 毕业生列表查询参数（type 别名以获得索引签名兼容 http.get 参数） */
 export type GraduationQuery = {
+  graduateYear: string
   name?: string
   studentNo?: string
   status?: '' | GraduationAuditStatus
 }
 
-/** 毕业生列表（GET /graduation/list） */
+/** 毕业生列表（GET /graduate-students/year/{graduateYear}） */
 export function getGraduationList(params: GraduationQuery) {
-  return http.get<GraduationStudent[]>('/graduation/list', params)
+  const { graduateYear, ...query } = params
+  return http.get<GraduationStudent[]>(`/graduate-students/year/${encodeURIComponent(graduateYear)}`, query)
 }
 
-/** 毕业审核：通过（PUT /graduation/approve/{id}） */
-export function approveGraduation(id: number) {
-  return http.put<{ id: number; status: GraduationAuditStatus }>(`/graduation/approve/${id}`)
+/** 毕业审核：通过（POST /graduate-checks/audit） */
+export function approveGraduation(studentId: number) {
+  return http.post<{ studentId: number; checkStatus: 'PASS' }>('/graduate-checks/audit', {
+    studentId,
+    checkStatus: 'PASS',
+  })
 }
 
-/** 毕业审核：驳回（PUT /graduation/reject/{id}） */
-export function rejectGraduation(id: number) {
-  return http.put<{ id: number; status: GraduationAuditStatus }>(`/graduation/reject/${id}`)
+/** 毕业审核：驳回（POST /graduate-checks/audit） */
+export function rejectGraduation(studentId: number) {
+  return http.post<{ studentId: number; checkStatus: 'FAIL' }>('/graduate-checks/audit', {
+    studentId,
+    checkStatus: 'FAIL',
+  })
 }

@@ -1,11 +1,10 @@
 import { http } from '@/utils/request'
 
-/** 自动排考入参 */
+/** 自动排考入参（ExamArrangeDTO） */
 export interface AutoArrangeParams {
-  /** 学期，如 2026-2027学年第二学期 */
-  term: string
-  /** 年级，如 2024级 */
-  grade: string
+  examInfo: Record<string, unknown>
+  classroomIds: number[]
+  monitorTeacherIds: number[]
 }
 
 /** 单条排考结果 */
@@ -47,7 +46,7 @@ export interface AutoArrangeResult {
 
 /** 一键自动排考（Mock 返回含冲突的数据，前端以红 tag 高亮冲突行） */
 export function autoArrangeExam(data: AutoArrangeParams) {
-  return http.post<AutoArrangeResult>('/exam/auto-arrange', data)
+  return http.post<void>('/exam-schedules', data)
 }
 
 /* ==================== 考核方式申报审核 ==================== */
@@ -70,21 +69,25 @@ export interface ExamMethodApply {
   createTime: string
 }
 
-/** 考核方式申报审核列表（GET /exam/method-audit/list） */
+/** 考核方式申报审核列表（GET /exam-applies/export） */
 export function getMethodAuditList(params: {
   courseName?: string
   teacher?: string
   status?: '' | MethodAuditStatus
 }) {
-  return http.get<ExamMethodApply[]>('/exam/method-audit/list', params)
+  return http.get<ExamMethodApply[]>('/exam-applies/export', params)
 }
 
-/** 考核方式申报：通过（PUT /exam/method-audit/approve/{id}） */
+/** 考核方式申报：通过（PUT /exam-applies/{id}/audit?status=PASS） */
 export function approveMethodAudit(id: number) {
-  return http.put<{ id: number; status: MethodAuditStatus }>(`/exam/method-audit/approve/${id}`)
+  return http.put<{ id: number; status: MethodAuditStatus }>(`/exam-applies/${id}/audit`, undefined, {
+    params: { status: 'PASS' },
+  })
 }
 
-/** 考核方式申报：驳回（PUT /exam/method-audit/reject/{id}） */
+/** 考核方式申报：驳回（PUT /exam-applies/{id}/audit?status=FAIL） */
 export function rejectMethodAudit(id: number) {
-  return http.put<{ id: number; status: MethodAuditStatus }>(`/exam/method-audit/reject/${id}`)
+  return http.put<{ id: number; status: MethodAuditStatus }>(`/exam-applies/${id}/audit`, undefined, {
+    params: { status: 'FAIL' },
+  })
 }

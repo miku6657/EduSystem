@@ -2,15 +2,11 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  cancelClassroomApply,
   getMyClassroomApplies,
   type ClassroomApplyRecord,
 } from '@/api/classroom'
 
 const router = useRouter()
-
-/** 提交后 N 毫秒内不可取消 */
-const CANCEL_LOCK_MS = 30 * 60 * 1000
 
 const statusTabs = [
   { name: 'all', label: '全部' },
@@ -37,62 +33,11 @@ const errorMsg = ref('')
 const tick = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
-/* ==================== 取消确认弹窗 ==================== */
-
-const cancelTarget = ref<ClassroomApplyRecord | null>(null)
-const cancelVisible = ref(false)
-const cancelling = ref(false)
-
 const tagTypeByStatus: Record<ClassroomApplyRecord['status'], 'primary' | 'success' | 'danger' | 'warning' | 'default'> = {
   待审核: 'warning',
   已通过: 'success',
   已驳回: 'danger',
   已取消: 'default',
-}
-
-/** 是否处于“30 分钟内不可取消”锁定 */
-function isLocked(record: ClassroomApplyRecord) {
-  const created = new Date(record.applyTime.replace(/-/g, '/')).getTime()
-  return Date.now() - created < CANCEL_LOCK_MS
-}
-
-/** 取消锁定剩余时间（mm:ss） */
-function lockRemainText(record: ClassroomApplyRecord) {
-  const created = new Date(record.applyTime.replace(/-/g, '/')).getTime()
-  const remain = Math.max(0, Math.ceil((CANCEL_LOCK_MS - (Date.now() - created)) / 1000))
-  const mm = String(Math.floor(remain / 60)).padStart(2, '0')
-  const ss = String(remain % 60).padStart(2, '0')
-  return `${mm}:${ss}`
-}
-
-/** 该记录是否展示“取消申请”按钮（仅待审核可取消） */
-function canCancel(record: ClassroomApplyRecord) {
-  return record.status === '待审核'
-}
-
-function askCancel(record: ClassroomApplyRecord) {
-  if (isLocked(record)) return
-  cancelTarget.value = record
-  cancelVisible.value = true
-}
-
-async function confirmCancel() {
-  const record = cancelTarget.value
-  if (!record) return
-  cancelling.value = true
-  try {
-    await cancelClassroomApply(record.id)
-    // 乐观更新：本地状态置为“已取消”
-    record.status = '已取消'
-    reload()
-  } catch {
-    // 失败时刷新列表，还原服务端真实状态
-    reload()
-  } finally {
-    cancelVisible.value = false
-    cancelTarget.value = null
-    cancelling.value = false
-  }
 }
 
 /* ==================== 列表加载（van-list 无限滚动） ==================== */
@@ -101,15 +46,14 @@ async function loadPage() {
   if (loading.value) return
   loading.value = true
   try {
-    const result = await getMyClassroomApplies({
-      page: page.value,
-      pageSize: 10,
-      status: activeTab.value === 'all' ? undefined : activeTab.value,
-    })
-    list.value = page.value === 1 ? result.list : [...list.value, ...result.list]
-    total.value = result.total
-    finished.value = list.value.length >= result.total
-    page.value += 1
+    const result = await getMyClassroomApplies()
+    const filtered = activeTab.value === 'all'
+      ? result
+      : result.filter((item) => item.status === activeTab.value)
+    list.value = filtered
+    total.value = filtered.length
+    finished.value = true
+    page.value = 2
     errorMsg.value = ''
   } catch {
     errorMsg.value = '加载失败，请下拉重试'
@@ -203,21 +147,7 @@ onBeforeUnmount(() => {
           <div class="cr-card__foot">
             <span class="cr-card__time">
               提交于 {{ record.applyTime }}
-              <van-tag v-if="canCancel(record) && isLocked(record)" type="warning" plain>
-                30分钟锁定中 {{ lockRemainText(record) }}
-              </van-tag>
             </span>
-            <van-button
-              v-if="canCancel(record)"
-              size="small"
-              plain
-              type="danger"
-              :disabled="isLocked(record)"
-              :loading="cancelling && cancelTarget?.id === record.id"
-              @click="askCancel(record)"
-            >
-              {{ isLocked(record) ? '暂不可取消' : '取消申请' }}
-            </van-button>
           </div>
         </div>
 
@@ -225,25 +155,6 @@ onBeforeUnmount(() => {
       </van-list>
     </van-pull-refresh>
 
-    <div class="cr-mobile__tip">
-      规则提示：教室申请提交后 <b>30 分钟</b> 内不可取消，超时后可在“待审核”列表中取消。
-    </div>
-
-    <!-- 取消确认 -->
-    <van-dialog
-      v-model:show="cancelVisible"
-      title="取消教室申请"
-      show-cancel-button
-      @confirm="confirmCancel"
-    >
-      <div class="cr-dialog-body">
-        <p>确定取消以下申请吗？</p>
-        <p v-if="cancelTarget" class="cr-dialog-body__detail">
-          {{ cancelTarget.roomName }} · {{ cancelTarget.date }} {{ cancelTarget.timeSlot }}
-        </p>
-        <p class="cr-dialog-body__tip">取消后如需使用该教室，请重新提交申请。</p>
-      </div>
-    </van-dialog>
   </div>
 </template>
 

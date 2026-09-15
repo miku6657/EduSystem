@@ -2,7 +2,7 @@ import { http } from '@/utils/request'
 
 /** 待办审批项 */
 export interface TodoItem {
-  id: number
+  id: number | string
   /** 业务类型：course-adjust（调课）/ classroom（教室申请） */
   type: 'course-adjust' | 'classroom'
   title: string

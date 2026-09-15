@@ -2,11 +2,9 @@ import type { RouteRecordRaw } from 'vue-router'
 import dashboardRoutes from './dashboard'
 import teachingBaseRoutes from './teaching-base'
 import examRoutes from './exam'
-import textbookRoutes from './textbook'
 import classroomRoutes from './classroom'
 import courseAdjustRoutes from './course-adjust'
 import graduationRoutes from './graduation'
-import upgradeRoutes from './upgrade'
 import attendanceRoutes from './attendance'
 
 /**
@@ -18,10 +16,8 @@ export const layoutModuleRoutes: RouteRecordRaw[] = [
   ...dashboardRoutes,
   ...teachingBaseRoutes,
   ...examRoutes,
-  ...textbookRoutes,
   ...classroomRoutes,
   ...courseAdjustRoutes,
   ...graduationRoutes,
-  ...upgradeRoutes,
   ...attendanceRoutes,
 ]

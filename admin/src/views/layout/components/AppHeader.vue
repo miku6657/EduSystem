@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, Bell, Expand, Fold } from '@element-plus/icons-vue'
+import { getClassroomApprovalList } from '@/api/classroom'
 import type { TodoItem } from '@/api/todo'
 import { useAppStore } from '@/stores/appStore'
 import { useUserStore } from '@/stores/user'
@@ -27,12 +28,27 @@ const handleTodoCommand = (todo: TodoItem) => {
   }
 }
 
-onMounted(() => {
-  // 顶部导航：加载当前学期（appStore + mock /api/term/current）
+onMounted(async () => {
+  // 顶部导航：从 /api/terms 列表加载当前学期
   if (!appStore.currentTerm) {
     appStore.fetchCurrentTerm().catch(() => undefined)
   }
-  // 顶部导航：加载审批待办提醒
+  try {
+    const applications = await getClassroomApprovalList({ status: '待审核' })
+    todos.value = applications
+      .filter((item) => item.status === '待审核')
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        type: 'classroom' as const,
+        title: item.roomName ? `${item.roomName} 使用申请` : '教室使用申请',
+        applicant: item.applicant,
+        applyTime: item.applyTime,
+        route: '/classroom',
+      }))
+  } catch {
+    // 错误提示已由请求层统一处理
+  }
 })
 
 const handleUserCommand = async (command: string) => {

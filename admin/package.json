@@ -12,20 +12,21 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
-    "axios": "^1.20.0",
-    "element-plus": "^2.14.5",
-    "mockjs": "^1.1.0",
-    "pinia": "^3.0.4",
-    "vant": "^4.10.2",
-    "vue": "^3.5.42",
-    "vue-router": "^4.6.4",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
     "@fullcalendar/vue3": "^6.1.15",
+    "axios": "^1.20.0",
+    "element-plus": "^2.14.5",
+    "json-bigint": "^1.0.0",
+    "pinia": "^3.0.4",
+    "vant": "^4.10.2",
+    "vue": "^3.5.42",
+    "vue-router": "^4.6.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/json-bigint": "^1.0.4",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
@@ -33,7 +34,6 @@
     "unplugin-auto-import": "^21.1.0",
     "unplugin-vue-components": "^32.1.0",
     "vite": "^8.2.2",
-    "vite-plugin-mock": "^3.0.2",
     "vue-tsc": "^3.3.11"
   }
 }

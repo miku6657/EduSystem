@@ -67,9 +67,11 @@ const dialogFields: DialogField[] = [
     :search-fields="searchFields"
     :table-columns="tableColumns"
     :dialog-fields="dialogFields"
-    api-url="/api/class/list"
-    add-api="/api/class/add"
-    edit-api="/api/class/edit"
-    delete-api="/api/class/delete"
+    api-url="/api/classes"
+    add-api="/api/classes"
+    edit-api="/api/classes/{id}"
+    delete-api="/api/classes/{id}"
+    edit-method="put"
+    delete-method="delete"
   />
 </template>

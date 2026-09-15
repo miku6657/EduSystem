@@ -10,7 +10,6 @@ import type { CalendarOptions, DayCellMountArg, EventClickArg, EventInput } from
 import {
   approveClassroomApply,
   getClassroomApprovalList,
-  getClassroomOccupancy,
   rejectClassroomApply,
   type ClassroomApplyRecord,
   type ClassroomApprovalFilter,
@@ -126,17 +125,10 @@ function repaintCells() {
 
 async function loadOccupancy() {
   if (!monthStart.value) return
-  occupancyLoading.value = true
-  try {
-    const end = addDaysText(monthEnd.value, -1)
-    occupancy.value = await getClassroomOccupancy({ start: monthStart.value, end })
-  } catch {
-    // 错误提示已由请求层统一处理
-  } finally {
-    occupancyLoading.value = false
-    repaintCells()
-    calendarRef.value?.getApi().refetchEvents()
-  }
+  occupancy.value = []
+  occupancyLoading.value = false
+  repaintCells()
+  calendarRef.value?.getApi().refetchEvents()
 }
 
 function onDatesSet() {
@@ -210,7 +202,7 @@ function statusOf(row: any) {
   return approvalStatusMeta(row.status)
 }
 
-/** 执行审批：通过 / 驳回（PUT /api/classroom/approve/{id} | reject/{id}） */
+/** 执行审批：通过 / 驳回（PUT /api/classroom-applies/{id}/approve | reject） */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleAudit(row: any, action: 'approve' | 'reject') {
   const actionText = action === 'approve' ? '通过' : '驳回'

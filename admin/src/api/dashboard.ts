@@ -48,6 +48,50 @@ export interface ExamItem {
 }
 
 /** 获取后台首页统计数据 */
-export function getDashboardStatistics() {
-  return http.get<DashboardStatistics>('/dashboard/statistics')
+export async function getDashboardStatistics(): Promise<DashboardStatistics> {
+  type PageData<T> = { records?: T[]; list?: T[]; total?: number }
+  type GraduateCheck = { studentId?: number; checkStatus?: string }
+  type ClassroomApply = {
+    id: number
+    applicant?: string
+    applyTime?: string
+    roomName?: string
+    status?: string
+  }
+
+  const [courses, classrooms, graduateChecks, classroomApplies] = await Promise.allSettled([
+    http.get<PageData<unknown>>('/courses', { pageNo: 1, pageSize: 1 }),
+    http.get<PageData<unknown>>('/classrooms', { pageNo: 1, pageSize: 1 }),
+    http.get<GraduateCheck[]>('/graduate-checks', { checkStatus: 'WAIT' }),
+    http.get<ClassroomApply[]>('/classroom-applies', { status: '待审核' }),
+  ])
+
+  const pageTotal = (result: PromiseSettledResult<PageData<unknown>>) =>
+    result.status === 'fulfilled' ? result.value.total ?? 0 : 0
+  const pendingGraduationCount = graduateChecks.status === 'fulfilled'
+    ? graduateChecks.value.filter((item) => item.checkStatus === 'WAIT' || item.checkStatus === '待审核').length
+    : 0
+  const pendingApprovals: PendingApprovalItem[] = classroomApplies.status === 'fulfilled'
+    ? classroomApplies.value.slice(0, 5).map((item) => ({
+      id: item.id,
+      type: '教室申请审批',
+      title: item.roomName ? `${item.roomName} 使用申请` : '教室使用申请',
+      applicant: item.applicant ?? '',
+      applyTime: item.applyTime ?? '',
+      status: item.status,
+    }))
+    : []
+
+  return {
+    courseCount: pageTotal(courses),
+    classroomCount: pageTotal(classrooms),
+    todayAdjustCount: 0,
+    pendingGraduationCount,
+    pendingApprovals,
+    pendingAdjust: 0,
+    pendingClassroom: pendingApprovals.length,
+    classroomUsageRate: 0,
+    notices: [],
+    upcomingExams: [],
+  }
 }

@@ -24,7 +24,7 @@ const STATUS_META: Record<GraduationAuditStatus, { text: string; type: 'warning'
 }
 
 /** 查询条件 */
-const query = reactive({ name: '', studentNo: '', status: '' as '' | GraduationAuditStatus })
+const query = reactive({ graduateYear: '2026', name: '', studentNo: '', status: '' as '' | GraduationAuditStatus })
 
 /** 列表状态 */
 const loading = ref(false)
@@ -40,6 +40,7 @@ async function loadData() {
   loading.value = true
   try {
     rows.value = await getGraduationList({
+      graduateYear: query.graduateYear.trim(),
       name: query.name.trim() || undefined,
       studentNo: query.studentNo.trim() || undefined,
       status: query.status || undefined,
@@ -56,6 +57,7 @@ function onQuery() {
 }
 
 function onReset() {
+  query.graduateYear = '2026'
   query.name = ''
   query.studentNo = ''
   query.status = ''
@@ -138,6 +140,9 @@ onMounted(loadData)
     <!-- 搜索栏 -->
     <el-card shadow="never" class="filter-card">
       <el-form inline class="filter-form" @submit.prevent="onQuery">
+        <el-form-item label="毕业年份">
+          <el-input v-model="query.graduateYear" placeholder="请输入毕业年份" style="width: 130px" @keyup.enter="onQuery" />
+        </el-form-item>
         <el-form-item label="姓名">
           <el-input
             v-model="query.name"

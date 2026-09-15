@@ -18,14 +18,17 @@ const props = withDefaults(
     tableColumns?: TableColumn[]
     /** 新增 / 编辑弹窗表单配置 */
     dialogFields?: DialogField[]
-    /** 列表查询接口，如 /api/course/list */
+    /** 列表查询接口，如 /api/courses */
     apiUrl: string
-    /** 新增接口，如 /api/course/add；未提供时点击“新增”提示“待联调” */
+    /** 新增接口，如 /api/courses；未提供时点击“新增”提示“待联调” */
     addApi?: string
-    /** 编辑接口，如 /api/course/edit；未提供时点击“编辑”提示“待联调” */
+    /** 编辑接口，如 /api/courses/{id}；未提供时点击“编辑”提示“待联调” */
     editApi?: string
-    /** 删除接口，如 /api/course/delete（按 id 删除） */
+    /** 删除接口，如 /api/courses/{id}（按 id 删除） */
     deleteApi: string
+    addMethod?: 'post'
+    editMethod?: 'post' | 'put'
+    deleteMethod?: 'post' | 'delete'
     /** 每页条数，默认 10 */
     pageSize?: number
     /** 行主键，默认 id */
@@ -40,6 +43,9 @@ const props = withDefaults(
     dialogFields: () => [],
     pageSize: 10,
     rowKey: 'id',
+    addMethod: 'post',
+    editMethod: 'post',
+    deleteMethod: 'post',
   },
 )
 
@@ -77,19 +83,23 @@ function resolveUrl(url: string) {
   return url.startsWith('/api') ? url.slice('/api'.length) : url
 }
 
+function resolveActionUrl(url: string, id: unknown) {
+  return resolveUrl(url).replace('{id}', encodeURIComponent(String(id)))
+}
+
 /** 查询列表 */
 const loadData = async () => {
   loading.value = true
   try {
-    const params: Record<string, unknown> = { page: page.value, pageSize: pageSize.value }
+    const params: Record<string, unknown> = { pageNo: page.value, pageSize: pageSize.value }
     for (const key of Object.keys(searchParams)) {
       const value = searchParams[key]
       if (value !== '' && value !== null && value !== undefined) {
         params[key] = value
       }
     }
-    const data = await http.get<PageResult<Row>>(resolveUrl(props.apiUrl), params)
-    rows.value = data.list
+    const data = await http.get<PageResult<Row> & { records?: Row[]; content?: Row[] }>(resolveUrl(props.apiUrl), params)
+    rows.value = data.list ?? data.records ?? data.content ?? []
     total.value = data.total
     // 删除后当前页可能为空：自动回退一页
     if (rows.value.length === 0 && page.value > 1) {
@@ -191,7 +201,12 @@ const handleSave = async () => {
 
     if (editingRow.value) {
       payload[props.rowKey] = editingRow.value[props.rowKey]
-      await http.post<unknown>(resolveUrl(props.editApi), payload)
+      const url = resolveActionUrl(props.editApi, editingRow.value[props.rowKey])
+      if (props.editMethod === 'put') {
+        await http.put<unknown>(url, payload)
+      } else {
+        await http.post<unknown>(url, payload)
+      }
       ElMessage.success('修改成功')
       dialogVisible.value = false
       await loadData()
@@ -222,7 +237,12 @@ const handleDelete = async (row: Row) => {
   } catch {
     return
   }
-  await http.post<unknown>(resolveUrl(props.deleteApi), { [props.rowKey]: row[props.rowKey] })
+  const url = resolveActionUrl(props.deleteApi, row[props.rowKey])
+  if (props.deleteMethod === 'delete') {
+    await http.delete<unknown>(url)
+  } else {
+    await http.post<unknown>(url, { [props.rowKey]: row[props.rowKey] })
+  }
   ElMessage.success('删除成功')
   loadData()
 }
@@ -247,7 +267,12 @@ const handleBatchDelete = async () => {
   }
 
   for (const row of selectedRows.value) {
-    await http.post<unknown>(resolveUrl(props.deleteApi), { [props.rowKey]: row[props.rowKey] })
+    const url = resolveActionUrl(props.deleteApi, row[props.rowKey])
+    if (props.deleteMethod === 'delete') {
+      await http.delete<unknown>(url)
+    } else {
+      await http.post<unknown>(url, { [props.rowKey]: row[props.rowKey] })
+    }
   }
   ElMessage.success('批量删除成功')
   tableRef.value?.clearSelection()
