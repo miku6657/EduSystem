@@ -3,12 +3,17 @@
  * 教师 · 我的监考
  * 数据源：GET /api/exam-monitor/list-by-teacher/{teacherId}
  * 按考试日期分组：今天及以后的排前面，已过期的置灰并标记「已结束」。
+ *
+ * 结构：顶部卡片头（PageHeader + StatBar）+ PageState 三态。
  */
 import { computed, onMounted } from 'vue'
 import { listMyInvigilations } from '@/api/examMonitor'
 import type { ExamMonitor } from '@/api/examMonitor'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { MONITOR_ROLE_TEXT } from '@/constants/dict'
 import { currentWeekRange, formatDate, todayStr } from '@/utils/format'
 
@@ -75,6 +80,19 @@ const nextText = computed(() => {
   return `${formatDate(exam.examDate)}${time}`
 })
 
+/** 统计条里的「最近一场」只放日期（MM-DD），完整时间放下面一行 muted 文案，避免 20px 字号折行 */
+const nextShort = computed(() => {
+  const exam = nextExam.value
+  return exam?.examDate ? formatDate(exam.examDate).slice(5) : '—'
+})
+
+/** 统计条数据（对齐公共组件 StatBar）：数值型指标放 StatBar，长文本另起一行 */
+const summaryItems = computed(() => [
+  { label: '本周监考场次', value: weekCount.value },
+  { label: '累计监考场次', value: monitors.value.length },
+  { label: '最近一场', value: nextShort.value },
+])
+
 /** 工号未解析时重试解析业务身份 */
 async function retryProfile() {
   await userStore.resolveProfile(true)
@@ -91,29 +109,20 @@ onMounted(reload)
     </van-empty>
 
     <template v-else>
-      <!-- 顶部统计 -->
-      <div class="st-card inv__summary">
-        <div class="inv__summary-item">
-          <div class="inv__summary-value">{{ weekCount }}</div>
-          <div class="st-muted">本周监考场次</div>
-        </div>
-        <div class="inv__summary-item">
-          <div class="inv__summary-next">{{ nextText }}</div>
-          <div class="st-muted">最近一场</div>
-        </div>
+      <!-- 顶部：标题 + 概览（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="我的监考" />
+        <StatBar :items="summaryItems" />
+        <div v-if="nextExam" class="st-muted inv__next">下一场：{{ nextText }}</div>
       </div>
 
-      <div v-if="loading" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="groups.length === 0" description="暂无监考安排" />
-
-      <template v-else>
+      <PageState
+        :loading="loading"
+        :error="error"
+        :empty="groups.length === 0"
+        empty-text="暂无监考安排"
+        @retry="reload"
+      >
         <div
           v-for="group in groups"
           :key="group.date"
@@ -144,25 +153,12 @@ onMounted(reload)
             <div class="st-muted">考场：{{ item.roomName || '待安排' }}</div>
           </div>
         </div>
-      </template>
+      </PageState>
     </template>
   </div>
 </template>
 
 <style scoped>
-.inv__summary {
-  display: flex;
-  justify-content: space-around;
-  text-align: center;
-}
-.inv__summary-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-.inv__summary-next {
-  font-size: 13px;
-  font-weight: 600;
-}
 .inv__date {
   font-size: 15px;
   font-weight: 600;
@@ -179,9 +175,12 @@ onMounted(reload)
 .inv__meta {
   margin: 4px 0;
 }
+.inv__next {
+  margin-top: 10px;
+}
 /* 已过期的监考置灰 */
 .inv__group--finished {
   color: var(--st-text-light);
-  background: #fafafa;
+  background: var(--st-bg);
 }
 </style>

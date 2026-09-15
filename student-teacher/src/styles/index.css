@@ -19,6 +19,13 @@
   --st-danger: #f56c6c;
   --st-info: #909399;
 
+  /* 主题色的浅色底（对齐 Element Plus 的 *-light-9，用于状态卡片的背景） */
+  --st-primary-light: #ecf5ff;
+  --st-success-light: #f0f9eb;
+  --st-warning-light: #fdf6ec;
+  --st-danger-light: #fef0f0;
+  --st-info-light: #f4f4f5;
+
   /* 文字与边框 */
   --st-text: #303133;
   --st-text-regular: #606266;
@@ -51,6 +58,9 @@
   --van-background-2: #ffffff;
   --van-nav-bar-title-text-color: #303133;
   --van-tabbar-item-active-color: #409eff;
+  /* 顶栏高度与 admin 的 el-header（56px）对齐 */
+  --van-nav-bar-height: 56px;
+  --van-nav-bar-background: #ffffff;
 }
 
 *,

@@ -4,6 +4,8 @@
  * 列表：GET  /api/exam-apply/my/list?teacherId（后端缺口接口，现由 Mock 提供）
  * 提交：POST /api/exam-apply/apply（同课程已有待审核申报时会失败）
  * 审核在后台管理端完成，本页只负责提交与查看状态。
+ *
+ * 结构：顶部卡片头（PageHeader + 主操作）+ PageState 三态。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
@@ -13,6 +15,9 @@ import { listMyCourses } from '@/api/base'
 import type { Course } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, EXAM_METHOD_OPTIONS } from '@/constants/dict'
 import { formatDateTime } from '@/utils/format'
 
@@ -108,6 +113,13 @@ async function retryProfile() {
   reloadCourses()
 }
 
+/** 统计条数据（对齐公共组件 StatBar）：全部由本人申报列表派生，不新增接口 */
+const summaryItems = computed(() => [
+  { label: '申报总数', value: applies.value.length },
+  { label: '待审核', value: applies.value.filter((item) => item.status === 'WAIT').length },
+  { label: '已通过', value: applies.value.filter((item) => item.status === 'PASS').length },
+])
+
 onMounted(() => {
   reload()
   reloadCourses()
@@ -121,21 +133,25 @@ onMounted(() => {
     </van-empty>
 
     <template v-else>
-      <van-button class="apply__add" type="primary" round block icon="plus" @click="openForm">
-        新增考核方式申报
-      </van-button>
-
-      <div v-if="loading" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
+      <!-- 顶部：标题 + 主操作（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="考核方式申报">
+          <template #actions>
+            <van-button size="small" type="primary" icon="plus" @click="openForm">
+              新增申报
+            </van-button>
+          </template>
+        </PageHeader>
+        <StatBar :items="summaryItems" />
       </div>
 
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="applies.length === 0" description="还没有考核方式申报记录" />
-
-      <template v-else>
+      <PageState
+        :loading="loading"
+        :error="error"
+        :empty="applies.length === 0"
+        empty-text="还没有考核方式申报记录"
+        @retry="reload"
+      >
         <div
           v-for="item in applies"
           :key="item.id ?? `${item.courseId}-${item.createTime}`"
@@ -154,7 +170,7 @@ onMounted(() => {
           <div v-if="item.reason" class="apply__reason">{{ item.reason }}</div>
           <div class="st-muted apply__time">提交时间：{{ formatDateTime(item.createTime) }}</div>
         </div>
-      </template>
+      </PageState>
 
       <div class="st-card st-muted apply__note">
         申报提交后由教研室 → 系主任 →
@@ -232,9 +248,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.apply__add {
-  margin-bottom: 10px;
-}
 .apply__course {
   font-size: 15px;
   font-weight: 600;

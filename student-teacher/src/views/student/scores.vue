@@ -4,13 +4,17 @@
  * 数据源：GET /api/score/list-by-student/{studentId}（后端已实现）
  *
  * 本页是师生端的**样式与写法样板**，其余页面请保持同样的结构：
- * useAsyncData + 显式 import + Vant 组件 + 底部下拉刷新 + 空/错误状态。
+ * 顶部卡片头（PageHeader + StatBar）+ useAsyncData + 显式 import + Vant 组件 +
+ * 底部下拉刷新 + PageState 三态。
  */
 import { computed, onMounted, ref } from 'vue'
 import { listMyScores } from '@/api/score'
 import type { ExamScore } from '@/api/score'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { formatScore } from '@/utils/format'
 import { PASS_SCORE_LINE, SCORE_STATUS_TEXT } from '@/constants/dict'
 
@@ -60,12 +64,19 @@ const summary = computed(() => {
   }
 })
 
-/** 分数颜色：不及格红、及格蓝 */
+/** 统计条数据（对齐公共组件 StatBar） */
+const summaryItems = computed(() => [
+  { label: '考试门数', value: summary.value.total },
+  { label: '平均分', value: summary.value.average },
+  { label: '及格率', value: `${summary.value.passRate}%` },
+])
+
+/** 分数颜色：不及格红、及格蓝（统一使用全局令牌，颜色随 admin 主题） */
 function scoreColor(row: ExamScore): string {
   if (row.status === 'ABSENT') {
-    return '#969799'
+    return 'var(--st-text-light)'
   }
-  return Number(row.score ?? 0) >= PASS_SCORE_LINE ? '#1989fa' : '#ee0a24'
+  return Number(row.score ?? 0) >= PASS_SCORE_LINE ? 'var(--st-primary)' : 'var(--st-danger)'
 }
 
 async function onRefresh() {
@@ -82,20 +93,10 @@ onMounted(reload)
 
 <template>
   <div>
-    <!-- 概览 -->
-    <div class="st-card score__summary">
-      <div class="score__summary-item">
-        <div class="score__summary-value">{{ summary.total }}</div>
-        <div class="st-muted">考试门数</div>
-      </div>
-      <div class="score__summary-item">
-        <div class="score__summary-value">{{ summary.average }}</div>
-        <div class="st-muted">平均分</div>
-      </div>
-      <div class="score__summary-item">
-        <div class="score__summary-value">{{ summary.passRate }}%</div>
-        <div class="st-muted">及格率</div>
-      </div>
+    <!-- 顶部：标题 + 概览（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="我的成绩" />
+      <StatBar :items="summaryItems" />
     </div>
 
     <van-tabs v-model:active="filter" sticky>
@@ -105,17 +106,13 @@ onMounted(reload)
     </van-tabs>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <div v-if="loading && !refreshing" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="visibleScores.length === 0" description="暂无成绩记录" />
-
-      <template v-else>
+      <PageState
+        :loading="loading && !refreshing"
+        :error="error"
+        :empty="visibleScores.length === 0"
+        empty-text="暂无成绩记录"
+        @retry="reload"
+      >
         <div
           v-for="row in visibleScores"
           :key="row.id ?? `${row.examId}-${row.studentId}`"
@@ -140,23 +137,12 @@ onMounted(reload)
             }}</van-tag>
           </div>
         </div>
-      </template>
+      </PageState>
     </van-pull-refresh>
   </div>
 </template>
 
 <style scoped>
-.score__summary {
-  display: flex;
-  justify-content: space-around;
-  text-align: center;
-}
-
-.score__summary-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-
 .score__name {
   font-size: 15px;
   font-weight: 600;

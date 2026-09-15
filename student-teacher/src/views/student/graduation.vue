@@ -2,12 +2,16 @@
 /**
  * 学生 · 毕业资格
  * 数据源：GET /api/graduate-check/by-student/{studentId}（可能返回 null：还没有审核记录）
+ *
+ * 结构对齐 scores.vue：顶部卡片头（PageHeader）+ 下拉刷新 + PageState 三态。
  */
 import { computed, onMounted, ref } from 'vue'
 import { getMyGraduateCheck } from '@/api/graduation'
 import type { GraduateCheck } from '@/api/graduation'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
 import { formatDateTime } from '@/utils/format'
 import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, PASS_FAIL_TEXT, dictText } from '@/constants/dict'
 
@@ -82,20 +86,22 @@ onMounted(reload)
 
 <template>
   <div>
+    <!-- 顶部：标题（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="毕业资格" />
+    </div>
+
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-empty v-if="!userStore.businessId" description="未解析到学号，请确认登录账号为学号" />
-
-      <div v-else-if="loading && !refreshing" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="!check" description="暂无毕业资格审核记录" />
-
-      <template v-else>
+      <!-- 未解析到学号时优先提示、不发请求，因此不进入加载态 -->
+      <PageState
+        :loading="loading && !refreshing && !!userStore.businessId"
+        :error="error"
+        :empty="!userStore.businessId || !check"
+        :empty-text="
+          userStore.businessId ? '暂无毕业资格审核记录' : '未解析到学号，请确认登录账号为学号'
+        "
+        @retry="reload"
+      >
         <!-- 结论卡：绿=通过 / 红=未通过 / 橙=审核中 -->
         <div class="st-card graduate__result" :class="`graduate__result--${conclusion.theme}`">
           <div class="graduate__result-title">{{ conclusion.title }}</div>
@@ -123,7 +129,7 @@ onMounted(reload)
             <div class="graduate__remark-text">{{ remarkText }}</div>
           </div>
         </div>
-      </template>
+      </PageState>
     </van-pull-refresh>
 
     <!-- 静态说明：毕业条件 -->
@@ -144,18 +150,18 @@ onMounted(reload)
 }
 
 .graduate__result--pass {
-  background: #f0fff4;
-  border-left-color: #07c160;
+  background: var(--st-success-light);
+  border-left-color: var(--st-success);
 }
 
 .graduate__result--fail {
-  background: #fff5f5;
-  border-left-color: #ee0a24;
+  background: var(--st-danger-light);
+  border-left-color: var(--st-danger);
 }
 
 .graduate__result--wait {
-  background: #fffaf5;
-  border-left-color: #ff976a;
+  background: var(--st-warning-light);
+  border-left-color: var(--st-warning);
 }
 
 .graduate__result-title {
@@ -164,15 +170,15 @@ onMounted(reload)
 }
 
 .graduate__result--pass .graduate__result-title {
-  color: #07c160;
+  color: var(--st-success);
 }
 
 .graduate__result--fail .graduate__result-title {
-  color: #ee0a24;
+  color: var(--st-danger);
 }
 
 .graduate__result--wait .graduate__result-title {
-  color: #ff976a;
+  color: var(--st-warning);
 }
 
 .graduate__result-desc {

@@ -13,6 +13,7 @@ import { listMyInvigilations } from '@/api/examMonitor'
 import { listMyClassroomApplies } from '@/api/classroom'
 import { listMyRetakes } from '@/api/retake'
 import { listMyUpgradeApplies } from '@/api/upgrade'
+import PageHeader from '@/components/PageHeader.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -126,33 +127,37 @@ onMounted(loadTodos)
       text="未解析到当前身份的业务ID，部分数据可能无法加载：请确认登录账号为学号/工号，或联系教务在后台维护对应关系。"
     />
 
-    <div class="st-section-title">我的待办</div>
-    <div v-if="todosLoading" class="st-card st-muted">加载中…</div>
-    <div v-else-if="todos.length === 0" class="st-card st-muted">暂无待办事项</div>
-    <template v-else>
-      <div
-        v-for="item in todos"
-        :key="item.text"
-        class="st-card st-row home__todo"
-        @click="router.push(item.route)"
-      >
-        <span>{{ item.text }}</span>
-        <van-icon name="arrow" />
-      </div>
-    </template>
+    <div class="st-card">
+      <PageHeader title="我的待办" />
+      <div v-if="todosLoading" class="st-muted">加载中…</div>
+      <div v-else-if="todos.length === 0" class="st-muted">暂无待办事项</div>
+      <template v-else>
+        <div
+          v-for="item in todos"
+          :key="item.text"
+          class="st-row home__todo"
+          @click="router.push(item.route)"
+        >
+          <span>{{ item.text }}</span>
+          <van-icon name="arrow" />
+        </div>
+      </template>
+    </div>
 
-    <div class="st-section-title">常用功能</div>
-    <van-grid :column-num="3" :border="false" square>
-      <van-grid-item
-        v-for="item in features"
-        :key="item.path"
-        :icon="item.meta?.icon"
-        :text="item.meta?.title"
-        @click="router.push(`/${item.path}`)"
-      />
-    </van-grid>
+    <div class="st-card">
+      <PageHeader title="常用功能" />
+      <van-grid :column-num="3" :border="false" square>
+        <van-grid-item
+          v-for="item in features"
+          :key="item.path"
+          :icon="item.meta?.icon"
+          :text="item.meta?.title"
+          @click="router.push(`/${item.path}`)"
+        />
+      </van-grid>
 
-    <div v-if="features.length === 0" class="st-card st-muted">当前角色暂无其他功能入口。</div>
+      <div v-if="features.length === 0" class="st-muted">当前角色暂无其他功能入口。</div>
+    </div>
 
     <div class="home__logout">
       <van-button round block plain type="danger" @click="onLogout">退出登录</van-button>
@@ -188,6 +193,14 @@ onMounted(loadTodos)
 .home__name {
   font-size: 16px;
   font-weight: 600;
+}
+
+.home__todo {
+  padding: 12px 0;
+}
+
+.home__todo + .home__todo {
+  border-top: 1px solid var(--st-border);
 }
 
 .home__logout {

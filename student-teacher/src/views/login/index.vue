@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { useUserStore } from '@/stores/user'
+import PageHeader from '@/components/PageHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,43 +50,47 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="st-page st-page--plain login">
-    <div class="login__header">
-      <h1 class="login__title">教学过程管理系统</h1>
-      <p class="login__subtitle">师生端 · 学生 / 教师</p>
+  <div class="login">
+    <!-- 主卡片：样式对齐 admin 的登录卡（渐变背景 + 白色圆角卡片 + 同款标题字号） -->
+    <div class="login-card">
+      <div class="login-card__header">
+        <h1 class="login-card__title">教学过程管理系统</h1>
+        <p class="login-card__subtitle">师生端 · 学生 / 教师</p>
+      </div>
+
+      <van-form @submit="onSubmit">
+        <van-cell-group inset>
+          <van-field
+            v-model="form.username"
+            name="username"
+            label="账号"
+            placeholder="学号 / 工号"
+            clearable
+            :rules="[{ required: true, message: '请输入学号或工号' }]"
+          />
+          <van-field
+            v-model="form.password"
+            type="password"
+            name="password"
+            label="密码"
+            placeholder="请输入密码"
+            clearable
+            :rules="[{ required: true, message: '请输入密码' }]"
+          />
+        </van-cell-group>
+
+        <div class="login-card__actions">
+          <van-button block type="primary" native-type="submit" :loading="loading">
+            登录
+          </van-button>
+        </div>
+      </van-form>
     </div>
 
-    <van-form @submit="onSubmit">
-      <van-cell-group inset>
-        <van-field
-          v-model="form.username"
-          name="username"
-          label="账号"
-          placeholder="学号 / 工号"
-          clearable
-          :rules="[{ required: true, message: '请输入学号或工号' }]"
-        />
-        <van-field
-          v-model="form.password"
-          type="password"
-          name="password"
-          label="密码"
-          placeholder="请输入密码"
-          clearable
-          :rules="[{ required: true, message: '请输入密码' }]"
-        />
-      </van-cell-group>
-
-      <div class="login__actions">
-        <van-button round block type="primary" native-type="submit" :loading="loading">
-          登录
-        </van-button>
-      </div>
-    </van-form>
-
-    <div class="login__demo">
-      <div class="st-section-title">演示账号（本地 Mock）</div>
-      <van-cell-group inset>
+    <!-- 演示账号卡片 -->
+    <div class="login-card login-card--demo">
+      <PageHeader title="演示账号（本地 Mock）" />
+      <van-cell-group>
         <van-cell
           v-for="account in demoAccounts"
           :key="account.username"
@@ -104,35 +109,52 @@ async function onSubmit() {
 
 <style scoped>
 .login {
-  padding-top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #93c5fd 100%);
 }
 
-.login__header {
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 24px 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 15%);
+}
+
+.login-card--demo {
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.login-card__header {
   margin-bottom: 24px;
   text-align: center;
 }
 
-.login__title {
+.login-card__title {
   margin: 0;
   font-size: 22px;
+  color: var(--st-text);
 }
 
-.login__subtitle {
+.login-card__subtitle {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--st-text-light);
 }
 
-.login__actions {
-  margin: 20px 16px 0;
-}
-
-.login__demo {
-  margin-top: 32px;
+.login-card__actions {
+  margin-top: 16px;
 }
 
 .login__tip {
-  margin: 12px 20px 0;
+  margin: 12px 4px 0;
   line-height: 1.6;
 }
 </style>

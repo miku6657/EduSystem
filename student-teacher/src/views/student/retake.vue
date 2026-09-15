@@ -3,6 +3,8 @@
  * 学生 · 补考重修
  * 数据源：GET /api/retake/list-by-student/{studentId}
  * 申请：POST /api/retake/apply?studentId&courseId&type（type：补考 / 重修）
+ *
+ * 结构对齐 scores.vue：顶部卡片头（PageHeader + StatBar）+ 下拉刷新 + PageState 三态。
  */
 import { computed, onMounted, ref } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
@@ -12,6 +14,9 @@ import { pageCourses } from '@/api/base'
 import type { Course } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { RETAKE_TYPE_OPTIONS } from '@/constants/dict'
 
 const userStore = useUserStore()
@@ -138,31 +143,27 @@ onMounted(reload)
 
 <template>
   <div>
-    <div class="st-card retake__summary">
-      <div v-for="item in summaryItems" :key="item.label" class="retake__summary-item">
-        <div class="retake__summary-value">{{ item.value }}</div>
-        <div class="st-muted">{{ item.label }}</div>
-      </div>
+    <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="补考重修">
+        <template #actions>
+          <van-button size="small" type="primary" @click="openApply">申请补考 / 重修</van-button>
+        </template>
+      </PageHeader>
+      <StatBar :items="summaryItems" />
     </div>
 
-    <van-button class="retake__actions" round block type="primary" @click="openApply">
-      申请补考 / 重修
-    </van-button>
-
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-empty v-if="!userStore.businessId" description="未解析到学号，请确认登录账号为学号" />
-
-      <div v-else-if="loading && !refreshing" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="retakes.length === 0" description="暂无补考重修记录" />
-
-      <template v-else>
+      <!-- 未解析到学号时优先提示、不发请求，因此不进入加载态 -->
+      <PageState
+        :loading="loading && !refreshing && !!userStore.businessId"
+        :error="error"
+        :empty="!userStore.businessId || retakes.length === 0"
+        :empty-text="
+          userStore.businessId ? '暂无补考重修记录' : '未解析到学号，请确认登录账号为学号'
+        "
+        @retry="reload"
+      >
         <div v-for="row in retakes" :key="row.id ?? `${row.type}-${row.courseId}`" class="st-card">
           <div class="st-row">
             <div class="retake__course">{{ row.courseName || `课程#${row.courseId}` }}</div>
@@ -170,7 +171,7 @@ onMounted(reload)
           </div>
           <div class="retake__meta st-muted">{{ examTextOf(row) }}</div>
         </div>
-      </template>
+      </PageState>
     </van-pull-refresh>
 
     <!-- 申请弹层：van-form + 课程单选 -->
@@ -226,24 +227,6 @@ onMounted(reload)
 </template>
 
 <style scoped>
-.retake__summary {
-  display: flex;
-  text-align: center;
-}
-
-.retake__summary-item {
-  flex: 1;
-}
-
-.retake__summary-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.retake__actions {
-  margin-bottom: 12px;
-}
-
 .retake__course {
   font-size: 15px;
   font-weight: 600;

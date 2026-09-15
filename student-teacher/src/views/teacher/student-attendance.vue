@@ -4,6 +4,8 @@
  * 点名录入：GET /api/student/list-by-class/{classId}、POST /api/student-attendance/record
  * 本周报表：GET /api/student-attendance/weekly-report?classId&date（date 传该周任意一天）
  * 班级 / 课程来自缺口接口 GET /api/teacher/my-classes、GET /api/teacher/my-courses
+ *
+ * 结构：顶部卡片头（PageHeader + 主操作 + StatBar）+ van-tabs（点名录入 / 本周报表）+ PageState 三态。
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { showToast } from 'vant'
@@ -13,6 +15,9 @@ import { listMyClasses, listMyCourses, listStudentsByClass } from '@/api/base'
 import type { ClassInfo, Course, Student } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { STUDENT_ATTENDANCE_STATUS } from '@/constants/dict'
 import { todayStr } from '@/utils/format'
 
@@ -93,6 +98,18 @@ watch(students, () => {
 const abnormalCount = computed(
   () => Object.values(marks.value).filter((status) => status !== '正常').length,
 )
+
+/** 统计条数据（对齐公共组件 StatBar）：本次点名概览 */
+const summaryItems = computed(() => [
+  { label: '已标记异常', value: abnormalCount.value },
+  { label: '班级人数', value: students.value.length },
+])
+
+/** 班级 / 课程加载失败时的重试（只重取选项，不改动已选条件） */
+function reloadOptions() {
+  reloadClasses()
+  reloadCourses()
+}
 
 function markAllNormal() {
   marks.value = buildMarks('正常')
@@ -257,139 +274,143 @@ onMounted(() => {
       <van-button round type="primary" size="small" @click="retryProfile">重新解析身份</van-button>
     </van-empty>
 
-    <van-tabs v-else>
-      <!-- 点名录入 -->
-      <van-tab title="点名录入" name="entry">
-        <div v-if="classLoading || courseLoading" class="st-empty">
-          <van-loading vertical>加载中…</van-loading>
-        </div>
-        <van-empty
-          v-else-if="classError || courseError"
-          image="error"
-          :description="classError || courseError"
-        />
-        <van-empty
-          v-else-if="!classes.length || !courses.length"
-          :description="classes.length ? '暂无任教课程' : '暂无任教班级'"
-        />
-        <template v-else>
-          <div class="st-card">
-            <van-field
-              readonly
-              is-link
-              label="班级"
-              placeholder="请选择班级"
-              :model-value="classText"
-              @click="openClassPicker('entry')"
-            />
-            <van-field
-              readonly
-              is-link
-              label="课程"
-              placeholder="请选择课程"
-              :model-value="courseText"
-              @click="openCoursePicker"
-            />
-            <van-field
-              readonly
-              is-link
-              label="上课日期"
-              :model-value="attendanceDate"
-              @click="openDatePicker('entry')"
-            />
-          </div>
-
-          <div class="st-row sa__bar">
-            <span class="st-muted"
-              >已标记异常 {{ abnormalCount }} 人 / 共 {{ students.length }} 人</span
-            >
-            <van-button size="mini" plain type="primary" @click="markAllNormal"
-              >全部标记为正常</van-button
-            >
-          </div>
-
-          <div v-if="studentLoading" class="st-empty">
-            <van-loading vertical>加载中…</van-loading>
-          </div>
-          <van-empty v-else-if="studentError" image="error" :description="studentError" />
-          <van-empty v-else-if="!classId" description="请先选择班级" />
-          <van-empty v-else-if="students.length === 0" description="该班级暂无学生" />
-          <template v-else>
-            <div v-for="student in students" :key="student.id" class="st-card">
-              <div class="st-row">
-                <span class="sa__name">{{ student.name }}</span>
-                <span class="st-muted">{{ student.studentNo }}</span>
-              </div>
-              <van-radio-group
-                v-model="marks[student.id ?? 0]"
-                direction="horizontal"
-                class="sa__options"
-              >
-                <van-radio v-for="status in STUDENT_ATTENDANCE_STATUS" :key="status" :name="status">
-                  {{ status }}
-                </van-radio>
-              </van-radio-group>
-            </div>
-            <van-button round block type="primary" :loading="saving" @click="submitRecords">
+    <template v-else>
+      <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="学生考勤">
+          <template #actions>
+            <van-button size="small" type="primary" :loading="saving" @click="submitRecords">
               提交考勤
             </van-button>
           </template>
-        </template>
-      </van-tab>
+        </PageHeader>
 
-      <!-- 本周报表 -->
-      <van-tab title="本周报表" name="report">
-        <div v-if="classLoading" class="st-empty">
-          <van-loading vertical>加载中…</van-loading>
-        </div>
-        <van-empty v-else-if="!classes.length" :description="classError || '暂无任教班级'" />
-        <template v-else>
-          <div class="st-card">
-            <van-field
-              readonly
-              is-link
-              label="班级"
-              placeholder="请选择班级"
-              :model-value="reportClassText"
-              @click="openClassPicker('report')"
-            />
-            <van-field
-              readonly
-              is-link
-              label="所在周"
-              :model-value="reportDate"
-              @click="openDatePicker('report')"
-            />
-          </div>
+        <StatBar :items="summaryItems" />
+      </div>
 
-          <div v-if="reportLoading" class="st-empty">
-            <van-loading vertical>加载中…</van-loading>
-          </div>
-          <van-empty v-else-if="reportError" image="error" :description="reportError">
-            <van-button round type="primary" size="small" @click="reloadReport"
-              >重新加载</van-button
-            >
-          </van-empty>
-          <van-empty v-else-if="!reportClassId" description="请先选择班级" />
-          <van-empty v-else-if="report.length === 0" description="本周暂无考勤数据" />
-          <template v-else>
-            <div v-for="row in report" :key="row.studentId ?? row.studentNo" class="st-card">
-              <div class="st-row">
-                <span class="sa__name">{{ row.studentName || `学生#${row.studentId}` }}</span>
-                <span class="st-muted">{{ row.studentNo || '—' }}</span>
-              </div>
-              <div class="sa__report">
-                <span>正常 {{ row.normal ?? 0 }}</span>
-                <span>迟到 {{ row.late ?? 0 }}</span>
-                <span>缺勤 {{ row.absent ?? 0 }}</span>
-                <span>请假 {{ row.leave ?? 0 }}</span>
-                <span>出勤率 {{ rateText(row.rate) }}</span>
-              </div>
+      <van-tabs>
+        <!-- 点名录入 -->
+        <van-tab title="点名录入" name="entry">
+          <PageState
+            :loading="classLoading || courseLoading"
+            :error="classError || courseError"
+            :empty="!classes.length || !courses.length"
+            :empty-text="classes.length ? '暂无任教课程' : '暂无任教班级'"
+            @retry="reloadOptions"
+          >
+            <div class="st-card">
+              <van-field
+                readonly
+                is-link
+                label="班级"
+                placeholder="请选择班级"
+                :model-value="classText"
+                @click="openClassPicker('entry')"
+              />
+              <van-field
+                readonly
+                is-link
+                label="课程"
+                placeholder="请选择课程"
+                :model-value="courseText"
+                @click="openCoursePicker"
+              />
+              <van-field
+                readonly
+                is-link
+                label="上课日期"
+                :model-value="attendanceDate"
+                @click="openDatePicker('entry')"
+              />
             </div>
-          </template>
-        </template>
-      </van-tab>
-    </van-tabs>
+
+            <div class="st-row sa__bar">
+              <van-button size="mini" plain type="primary" @click="markAllNormal"
+                >全部标记为正常</van-button
+              >
+            </div>
+
+            <PageState
+              :loading="studentLoading"
+              :error="studentError"
+              :empty="!classId || students.length === 0"
+              :empty-text="classId ? '该班级暂无学生' : '请先选择班级'"
+              @retry="reloadStudents"
+            >
+              <div v-for="student in students" :key="student.id" class="st-card">
+                <div class="st-row">
+                  <span class="sa__name">{{ student.name }}</span>
+                  <span class="st-muted">{{ student.studentNo }}</span>
+                </div>
+                <van-radio-group
+                  v-model="marks[student.id ?? 0]"
+                  direction="horizontal"
+                  class="sa__options"
+                >
+                  <van-radio
+                    v-for="status in STUDENT_ATTENDANCE_STATUS"
+                    :key="status"
+                    :name="status"
+                  >
+                    {{ status }}
+                  </van-radio>
+                </van-radio-group>
+              </div>
+            </PageState>
+          </PageState>
+        </van-tab>
+
+        <!-- 本周报表 -->
+        <van-tab title="本周报表" name="report">
+          <PageState
+            :loading="classLoading"
+            :empty="!classes.length"
+            :empty-text="classError || '暂无任教班级'"
+            @retry="reloadClasses"
+          >
+            <div class="st-card">
+              <van-field
+                readonly
+                is-link
+                label="班级"
+                placeholder="请选择班级"
+                :model-value="reportClassText"
+                @click="openClassPicker('report')"
+              />
+              <van-field
+                readonly
+                is-link
+                label="所在周"
+                :model-value="reportDate"
+                @click="openDatePicker('report')"
+              />
+            </div>
+
+            <PageState
+              :loading="reportLoading"
+              :error="reportError"
+              :empty="!reportClassId || report.length === 0"
+              :empty-text="reportClassId ? '本周暂无考勤数据' : '请先选择班级'"
+              @retry="reloadReport"
+            >
+              <div v-for="row in report" :key="row.studentId ?? row.studentNo" class="st-card">
+                <div class="st-row">
+                  <span class="sa__name">{{ row.studentName || `学生#${row.studentId}` }}</span>
+                  <span class="st-muted">{{ row.studentNo || '—' }}</span>
+                </div>
+                <div class="sa__report">
+                  <span>正常 {{ row.normal ?? 0 }}</span>
+                  <span>迟到 {{ row.late ?? 0 }}</span>
+                  <span>缺勤 {{ row.absent ?? 0 }}</span>
+                  <span>请假 {{ row.leave ?? 0 }}</span>
+                  <span>出勤率 {{ rateText(row.rate) }}</span>
+                </div>
+              </div>
+            </PageState>
+          </PageState>
+        </van-tab>
+      </van-tabs>
+    </template>
 
     <!-- 班级 / 课程 / 日期选择器 -->
     <van-popup v-model:show="showClassPicker" position="bottom" round>
@@ -424,6 +445,7 @@ onMounted(() => {
 
 <style scoped>
 .sa__bar {
+  justify-content: flex-end;
   margin: 0 4px 10px;
 }
 .sa__options {

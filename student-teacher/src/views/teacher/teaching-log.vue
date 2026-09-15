@@ -3,7 +3,8 @@
  * 教师 · 教学日志
  * 数据源：GET /api/teaching-log/list-by-teacher-week?teacherId&date（date 传该周任意一天）
  *         POST /api/teaching-log
- * 写法与 student/scores.vue 一致：useAsyncData + 显式 import + loading/error/空状态。
+ * 结构与 student/scores.vue 一致：顶部卡片头（PageHeader + StatBar）+ useAsyncData +
+ * 显式 import + Vant 组件 + PageState 三态。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
@@ -13,6 +14,9 @@ import { listMyClasses, listMyCourses } from '@/api/base'
 import type { ClassInfo, Course } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { addDays, todayStr, weekRangeOf } from '@/utils/format'
 
 const userStore = useUserStore()
@@ -45,6 +49,12 @@ const { data: classes, reload: reloadClasses } = useAsyncData<ClassInfo[]>(
   () => (teacherId.value ? listMyClasses(teacherId.value) : Promise.resolve([])),
   [],
 )
+
+/** 统计条数据（对齐公共组件 StatBar）：本页日志数与覆盖课程数 */
+const summaryItems = computed(() => [
+  { label: '已提交日志', value: logs.value.length },
+  { label: '涉及课程', value: new Set(logs.value.map((log) => log.courseId)).size },
+])
 
 /* ------------------------------ 新增表单 ------------------------------ */
 const showForm = ref(false)
@@ -191,14 +201,23 @@ onMounted(() => {
     </van-empty>
 
     <template v-else>
-      <!-- 周范围 + 本周提交情况 + 周切换 -->
+      <!-- 顶部：标题 + 主操作 + 周范围 + 概览（对齐 admin 的卡片头结构） -->
       <div class="st-card">
+        <PageHeader title="教学日志">
+          <template #actions>
+            <van-button size="small" type="primary" icon="plus" @click="openForm">
+              新增日志
+            </van-button>
+          </template>
+        </PageHeader>
+
         <div class="log__week">
           <div class="log__week-range">{{ weekRange.start }} ~ {{ weekRange.end }}</div>
-          <div class="st-muted">
-            {{ isThisWeek ? '本周' : '历史周' }} · 已提交 {{ logs.length }} 篇
-          </div>
+          <div class="st-muted">{{ isThisWeek ? '本周' : '历史周' }}</div>
         </div>
+
+        <StatBar :items="summaryItems" />
+
         <div class="st-row log__nav">
           <van-button size="small" plain type="primary" @click="shiftWeek(-7)">上一周</van-button>
           <van-button size="small" plain type="primary" @click="goThisWeek">本周</van-button>
@@ -206,21 +225,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <van-button class="log__add" type="primary" round block icon="plus" @click="openForm">
-        新增教学日志
-      </van-button>
-
-      <div v-if="loading" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="logs.length === 0" description="本周还没有教学日志" />
-
-      <template v-else>
+      <PageState
+        :loading="loading"
+        :error="error"
+        :empty="logs.length === 0"
+        empty-text="本周还没有教学日志"
+        @retry="reload"
+      >
         <div
           v-for="log in logs"
           :key="log.id ?? `${log.teachingDate}-${log.courseId}`"
@@ -243,7 +254,7 @@ onMounted(() => {
             {{ expanded[log.id ?? -1] ? '收起' : '展开' }}
           </div>
         </div>
-      </template>
+      </PageState>
     </template>
 
     <!-- 新增教学日志 -->
@@ -345,15 +356,15 @@ onMounted(() => {
 
 <style scoped>
 .log__week {
+  margin-bottom: 12px;
   text-align: center;
 }
 .log__week-range {
   font-size: 14px;
   font-weight: 600;
 }
-.log__nav,
-.log__add {
-  margin-bottom: 10px;
+.log__nav {
+  margin-top: 12px;
 }
 .log__title {
   font-size: 15px;

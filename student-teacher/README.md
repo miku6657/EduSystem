@@ -15,24 +15,24 @@ npm run dev        # http://localhost:5174
 
 演示账号（本地 Mock 与后端 `data.sql` 种子数据一致，密码均为 `123456`）：
 
-| 角色 | 账号 | 说明 |
-| --- | --- | --- |
+| 角色 | 账号         | 说明                                       |
+| ---- | ------------ | ------------------------------------------ |
 | 学生 | `2023005001` | 王小明（登录名即学号，也可用 `student01`） |
-| 教师 | `T001` | 张伟（登录名即工号，也可用 `teacher01`） |
+| 教师 | `T001`       | 张伟（登录名即工号，也可用 `teacher01`）   |
 
 登录名与 `base_student.student_no` / `base_teacher.teacher_no` 一致，师生端才能用登录名解析出 `studentId` / `teacherId`。
 `admin` 账号会被拒绝并提示使用后台管理端登录。
 
 常用命令：
 
-| 命令 | 说明 |
-| --- | --- |
-| `npm run dev` | 启动开发服务器（mock 默认开启） |
-| `npm run type-check` | `vue-tsc` 类型检查 |
-| `npm run build` | 类型检查 + 生产构建 |
-| `npm run preview` | 预览构建产物 |
-| `npm run lint` | ESLint 检查并自动修复（`lint:check` 只检查不修复） |
-| `npm run format` | Prettier 统一格式 |
+| 命令                 | 说明                                               |
+| -------------------- | -------------------------------------------------- |
+| `npm run dev`        | 启动开发服务器（mock 默认开启）                    |
+| `npm run type-check` | `vue-tsc` 类型检查                                 |
+| `npm run build`      | 类型检查 + 生产构建                                |
+| `npm run preview`    | 预览构建产物                                       |
+| `npm run lint`       | ESLint 检查并自动修复（`lint:check` 只检查不修复） |
+| `npm run format`     | Prettier 统一格式                                  |
 
 ## 目录结构
 
@@ -41,7 +41,8 @@ src
 ├── api/            按后端模块划分的接口层（auth / score / attendance / teacherAttendance /
 │                   teachingLog / retake / upgrade / graduation / examApply / examMonitor /
 │                   exam / base / profile / term）
-├── components/     PageState（加载/失败/空三态）、StatBar（统计条）
+├── components/     公共组件：PageHeader（卡片头：标题 + 操作）、FilterBar（配置化筛选）、
+│                   StatBar（统计条）、PageState（加载/失败/空三态）
 ├── composables/    useAsyncData —— 统一 loading / error / reload
 ├── constants/      dict.ts —— 状态字典（与后端枚举值一一对应）
 ├── mock/           index.ts —— 本地 Mock，路径与后端 Controller 完全一致
@@ -54,7 +55,7 @@ src
     ├── login/          登录
     ├── layout/         Layout（顶栏 + 底部 tabbar）
     ├── home/           首页（个人卡 + 功能宫格 + 退出登录）
-    ├── student/        我的成绩 / 我的考勤 / 补考重修 / 专升本报名 / 毕业资格
+    ├── student/        我的成绩 / **考试信息** / 我的考勤 / 补考重修 / 专升本报名 / 毕业资格
     ├── teacher/        教学日志 / 我的签到 / 学生考勤 / 成绩录入 / 考核方式申报 / 我的监考
     └── error/          404
 ```
@@ -63,13 +64,13 @@ src
 
 ### 1. 响应体双契约兼容（`src/utils/request.ts`）
 
-后台管理端直接按 `{ code: 0, data, msg }` 判定，而后端实际返回 `{ code: 200, message, data }`，导致"关掉 mock 就全红"。师生端把两种写法都吃下：
+后台管理端联调时曾按 `{ code: 0, data, msg }` 判定（其 Mock 契约），而后端实际返回 `{ code: 200, message, data }`，导致"关掉 mock 就全红"。师生端把两种写法都吃下（管理端 `src/utils/request.ts` 后来也已改成判 `code === 200`）：
 
 - 成功码：`0` 与 `200` 都算成功
 - 消息字段：优先 `msg`，回退 `message`
 - 分页体：`{ list, total, page, pageSize }` 与 MyBatis-Plus 的 `{ records, total, current, size }` 都能归一化成 `PageResult`
 - 分页入参：同时下发 `page` 与 `pageNo`，后端读哪个都能取到
-- `GET /api/term/current`：后端返回 `Term` 实体、手册约定返回字符串，两者都能用
+- 当前学期：后端已把 `/api/term/current` 改成 RESTful 的 `GET /api/terms`（返回列表），前端自行取 `status === 1`（进行中）那条；若接口返回字符串或单个 `Term` 实体，`getCurrentTerm()` 也能吃下
 
 页面代码因此完全不感知后端契约细节。
 
@@ -77,63 +78,79 @@ src
 
 `meta.roles` 不只是用来隐藏菜单：手输 URL 访问不属于自己角色的页面会被守卫拦回首页并提示。学生看不到也进不去教师页，反之亦然。
 
+## 视觉与结构对齐后台管理端
+
+管理端做审批、师生端做申请填报，两端风格不统一会让同一次答辩看起来像两个系统。本轮把 `admin` 的设计变量与页面骨架"搬"了过来（**只对齐视觉规范与页面结构，不改成 PC 布局**——师生端仍是 Vant 移动端）：
+
+| 层                                 | 对齐内容                                                                                                                                                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 设计变量（`src/styles/index.css`） | 主色 `#409eff`、成功 `#67c23a`、警告 `#e6a23c`、危险 `#f56c6c`、正文 `#303133` / 常规 `#606266` / 次要 `#909399`、边框 `#e4e7ed`、页面底 `#f5f7fa`、圆角 4px、管理端同款字体栈；同时把上述值映射到 Vant 变量（`--van-primary-color`、`--van-nav-bar-height: 56px` 等），组件内外一致 |
+| 卡片骨架                           | `.st-page > .st-card`：白底、1px 边框、4px 圆角、`14px` 间距，头部 `.st-card__header` = 左标题 + 右操作区，与管理端 `el-card` 的视觉层级一致                                                                                                                                         |
+| 公共组件                           | `PageHeader`（卡片头：标题 + `#actions` 插槽）、`FilterBar`（配置化筛选，`v-model` + `searchPlaceholder`）、`StatBar`（统计条）、`PageState`（加载/失败/空三态 + `retry`）                                                                                                           |
+| 页面结构                           | 全部 20 个页面统一为「卡片头（标题 + 操作）→ 筛选 → 统计 → 列表 / 表单」；带分页的页面用同一套底部翻页条                                                                                                                                                                             |
+| 登录页                             | 换成管理端同款渐变（`135deg, #2563eb → #3b82f6 → #93c5fd`）+ 白色圆角卡片                                                                                                                                                                                                            |
+| 顶栏/tabbar                        | 导航栏 56px 高 + 底部分割线，tabbar 选中色 `#409eff`，与管理端主题色相同                                                                                                                                                                                                             |
+
+这套对齐是**纯展示层重构**：接口、路由、字段、交互逻辑一行未改，迁移后 `vue-tsc` / ESLint / Prettier / `vite build` 与 Mock 冒烟结果均与迁移前一致。
+
 ## 页面清单与接口对照
 
 > 接口路径以 **`main` 分支的 RESTful 风格**为准（base 模块已由 `/api/xxx/page`、`/api/xxx/list-by-*` 改为复数资源 + query 过滤）。
 
-| 页面 | 路由 | 主要接口 | 后端状态 |
-| --- | --- | --- | --- |
-| 登录 | `/login` | `POST /api/auth/login`、`POST /api/auth/logout` | ✅ 已实现 |
-| 首页 | `/home` | `GET /api/students?studentNo=`、`GET /api/teachers?teacherNo=`、`GET /api/terms` | ✅ 已实现 |
-| **教室申请** | `/classroom-apply` | `GET /api/classroom-applies/my`、`POST /api/classroom-applies`、`PUT /api/classroom-applies/{id}/cancel`、`GET /api/classrooms` | ✅ 已实现（学生/教师共用；撤回接口本轮补） |
-| **课表 / 教学任务** | `/timetable` | `GET /api/teaching-tasks?classId=`（学生）、`?teacherId=`（教师） | ✅ 已实现（学生/教师共用，按星期分组；未排课的单独归组） |
-| **我的调课** | `/teacher/course-adjust` | `GET /api/course-adjusts/my`、`POST /api/course-adjusts`、`PUT /api/course-adjusts/{id}/cancel` | ✅ 已实现（教师端；审批列表/通过/驳回归管理端） |
-| 我的成绩 | `/student/scores` | `GET /api/score/list-by-student/{studentId}` | ✅ 已实现（已带课程/考试/学分） |
-| 我的考勤 | `/student/attendance` | `GET /api/student-attendance/list-by-student` | ✅ 已实现 |
-| 补考重修 | `/student/retake` | `GET /api/retake/list-by-student/{id}`、`POST /api/retake/apply?type=`、`GET /api/courses` | ✅ 已实现（含补考/重修类型） |
-| 专升本报名 | `/student/upgrade` | `POST /api/upgrade-apply/apply`、`GET /api/upgrade-apply/my/list` | ✅ 已实现 |
-| 毕业资格 | `/student/graduation` | `GET /api/graduate-check/by-student/{studentId}` | ✅ 已实现 |
-| 教学日志 | `/teacher/teaching-log` | `POST /api/teaching-log`、`GET /api/teaching-log/list-by-teacher-week`、`GET /api/teachers/{id}/courses` | ✅ 已实现 |
-| 我的签到 | `/teacher/check-in` | `POST /api/teacher-attendance/check-in/{teacherId}`、`GET /api/teacher-attendance/list-by-teacher`、`/stat-by-date` | ✅ 已实现（1 次请求取本人 7 天） |
-| 学生考勤 | `/teacher/student-attendance` | `POST /api/student-attendance/record`、`GET /api/student-attendance/weekly-report`、`GET /api/students?classId=` | ✅ 已实现 |
-| 成绩录入 | `/teacher/scores` | `GET /api/score/page-by-exam`、`POST /api/score/save/{examId}`、`GET /api/score/stat/{examId}`、`GET /api/exams` | ✅ 已实现（已带学生姓名） |
-| 考核方式申报 | `/teacher/method-apply` | `POST /api/exam-apply/apply`、`GET /api/exam-apply/my/list`、`GET /api/teachers/{id}/courses` | ✅ 已实现 |
-| 我的监考 | `/teacher/invigilation` | `GET /api/exam-monitor/list-by-teacher/{teacherId}` | ✅ 已实现（已带考试/考场信息） |
-| **班级花名册** | `/teacher/roster` | `GET /api/teachers/{id}/classes`、`GET /api/students?classId=` | ✅ 已实现（含关键字搜索与 **Excel 导出**） |
-| 我的待办 | `/home` 顶部 | `list-by-teacher`（教师）/ `classroom-applies/my`、`retake`、`upgrade`（学生） | ✅ 已实现（前端用现有接口拼装，无需后端待办接口） |
+| 页面                | 路由                          | 主要接口                                                                                                                        | 后端状态                                                             |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 登录                | `/login`                      | `POST /api/auth/login`、`POST /api/auth/logout`                                                                                 | ✅ 已实现                                                            |
+| 首页                | `/home`                       | `GET /api/students?studentNo=`、`GET /api/teachers?teacherNo=`、`GET /api/terms`                                                | ✅ 已实现                                                            |
+| **教室申请**        | `/classroom-apply`            | `GET /api/classroom-applies/my`、`POST /api/classroom-applies`、`PUT /api/classroom-applies/{id}/cancel`、`GET /api/classrooms` | ✅ 已实现（学生/教师共用；撤回接口本轮补）                           |
+| **课表 / 教学任务** | `/timetable`                  | `GET /api/teaching-tasks?classId=`（学生）、`?teacherId=`（教师）                                                               | ✅ 已实现（学生/教师共用，按星期分组；未排课的单独归组）             |
+| **调课申请**        | `/teacher/course-adjust`      | `GET /api/course-adjusts/my`、`POST /api/course-adjusts`、`PUT /api/course-adjusts/{id}/cancel`                                 | ✅ 已实现（教师端；含"我的调课"列表与撤回；审批归管理端）            |
+| 我的成绩            | `/student/scores`             | `GET /api/score/list-by-student/{studentId}`                                                                                    | ✅ 已实现（已带课程/考试/学分）                                      |
+| **考试信息**        | `/student/exams`              | `GET /api/exams`、`GET /api/terms`                                                                                              | ✅ 已实现（考试名称 / 学期 / 起止时间，支持按名称与学期筛选 + 分页） |
+| 我的考勤            | `/student/attendance`         | `GET /api/student-attendance/list-by-student`                                                                                   | ✅ 已实现                                                            |
+| 补考重修            | `/student/retake`             | `GET /api/retake/list-by-student/{id}`、`POST /api/retake/apply?type=`、`GET /api/courses`                                      | ✅ 已实现（含补考/重修类型）                                         |
+| 专升本报名          | `/student/upgrade`            | `POST /api/upgrade-apply/apply`、`GET /api/upgrade-apply/my/list`                                                               | ✅ 已实现                                                            |
+| 毕业资格            | `/student/graduation`         | `GET /api/graduate-check/by-student/{studentId}`                                                                                | ✅ 已实现                                                            |
+| 教学日志            | `/teacher/teaching-log`       | `POST /api/teaching-log`、`GET /api/teaching-log/list-by-teacher-week`、`GET /api/teachers/{id}/courses`                        | ✅ 已实现                                                            |
+| 我的签到            | `/teacher/check-in`           | `POST /api/teacher-attendance/check-in/{teacherId}`、`GET /api/teacher-attendance/list-by-teacher`、`/stat-by-date`             | ✅ 已实现（1 次请求取本人 7 天）                                     |
+| 学生考勤            | `/teacher/student-attendance` | `POST /api/student-attendance/record`、`GET /api/student-attendance/weekly-report`、`GET /api/students?classId=`                | ✅ 已实现                                                            |
+| 成绩录入            | `/teacher/scores`             | `GET /api/score/page-by-exam`、`POST /api/score/save/{examId}`、`GET /api/score/stat/{examId}`、`GET /api/exams`                | ✅ 已实现（已带学生姓名）                                            |
+| 考核方式申报        | `/teacher/method-apply`       | `POST /api/exam-apply/apply`、`GET /api/exam-apply/my/list`、`GET /api/teachers/{id}/courses`                                   | ✅ 已实现                                                            |
+| 我的监考            | `/teacher/invigilation`       | `GET /api/exam-monitor/list-by-teacher/{teacherId}`                                                                             | ✅ 已实现（已带考试/考场信息）                                       |
+| **班级花名册**      | `/teacher/roster`             | `GET /api/teachers/{id}/classes`、`GET /api/students?classId=`                                                                  | ✅ 已实现（含关键字搜索与 **Excel 导出**）                           |
+| 我的待办            | `/home` 顶部                  | `list-by-teacher`（教师）/ `classroom-applies/my`、`retake`、`upgrade`（学生）                                                  | ✅ 已实现（前端用现有接口拼装，无需后端待办接口）                    |
 
 ## 后端配套改动
 
-| # | 内容 | 说明 |
-| --- | --- | --- |
-| 1 | 新增表 `base_teaching_task`（任课关系） | 教师-课程-班级-学期；含 entity/mapper/service/controller 与 `schema.sql`、`data.sql` 种子数据 |
-| 2 | `GET /api/teachers?teacherNo=` | 工号 → 教师，师生端据此解析当前登录人的 `teacherId`（按 main 的 RESTful 风格） |
-| 3 | `GET /api/teachers/{id}/classes`、`/{id}/courses` | 基于任课表返回教师任教班级/课程 |
-| 4 | `GET /api/upgrade-apply/my/list`、`GET /api/exam-apply/my/list` | 师生端"我的报名 / 我的申报" |
-| 5 | `POST /api/retake/apply` 支持 `type` | 补考 / 重修均可用（缺省按重修） |
-| 6 | 列表补齐展示字段 | `exam_score` 带学生姓名/学号/考试/课程/学分，`exam_monitor` 带考试名/时间/考场/教师名，`exam_retake` 带课程名/考试名，`upgrade_apply` 带学生姓名，`exam_apply` 带课程名/教师名（`@TableField(exist=false)` + Service 批量填充，无 N+1） |
-| 7 | `GET /api/teacher-attendance/list-by-teacher` | 本人区间考勤，替代"逐日拉全校再筛本人" |
-| 8 | `data.sql` 密码改为 BCrypt 哈希 | 种子账号由"登不进去"变为可直接登录；登录名与学号/工号对齐 |
-| 9 | 成绩保存校验收紧 | 分数必须 0~100、学生ID非空、考试必须存在 |
-| 10 | **补齐 `classroom_apply` 建表脚本** | 队友的教室申请代码齐全，但 `schema.sql` 里漏了这张表（一跑就报"表不存在"）；已补建表 + 种子数据 + `数据库设计.md` 登记 |
-| 11 | 教室申请接口修正 | ① 申请人改为**以当前登录人为准**（原来信任请求体，可冒名提交，且 `applicant` 为 NOT NULL 会插入失败）；② `PUT /{id}/approve` 补 `@PreAuthorize("hasRole('ADMIN')")`（原来任何登录用户都能审批）；③ approve/reject 增加"仅待审核可审批"校验（原来可重复审批）；④ `GET /api/classroom-applies?status=` 原来忽略 status 参数，已生效；⑤ 新增 `PUT /{id}/cancel` 撤回（仅本人、仅待审核） |
-| 12 | **新增表 `course_adjust`（调课申请）** | 教师提交「原时间 → 调整后时间」的调课申请，管理端审批；含 entity/mapper/service/controller、`schema.sql`、`data.sql` 种子数据与 `数据库设计.md` 登记 |
-| 13 | 调课申请接口 `/api/course-adjusts` | `POST` 提交（teacherId 由服务端按登录人解析，非教师拒绝）、`GET /my` 我的调课、`GET ?status=` 审批列表（`@PreAuthorize` ADMIN）、`PUT /{id}/approve|reject`（ADMIN + 仅待审核）、`PUT /{id}/cancel`（仅本人、仅待审核） |
-| 14 | **`base_teaching_task` 增加上课时间字段** | `weekday` / `start_section` / `end_section` / `classroom_id` / `weeks`，并给 `TeachingTaskController` 增加 `?classId=` 查询；返回体带课程/班级/教师/教室名称，课表页可直接渲染 |
+| #   | 内容                                                            | 说明                                                                                                                                                                                                                                                                                                                                                                                  |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 新增表 `base_teaching_task`（任课关系）                         | 教师-课程-班级-学期；含 entity/mapper/service/controller 与 `schema.sql`、`data.sql` 种子数据                                                                                                                                                                                                                                                                                         |
+| 2   | `GET /api/teachers?teacherNo=`                                  | 工号 → 教师，师生端据此解析当前登录人的 `teacherId`（按 main 的 RESTful 风格）                                                                                                                                                                                                                                                                                                        |
+| 3   | `GET /api/teachers/{id}/classes`、`/{id}/courses`               | 基于任课表返回教师任教班级/课程                                                                                                                                                                                                                                                                                                                                                       |
+| 4   | `GET /api/upgrade-apply/my/list`、`GET /api/exam-apply/my/list` | 师生端"我的报名 / 我的申报"                                                                                                                                                                                                                                                                                                                                                           |
+| 5   | `POST /api/retake/apply` 支持 `type`                            | 补考 / 重修均可用（缺省按重修）                                                                                                                                                                                                                                                                                                                                                       |
+| 6   | 列表补齐展示字段                                                | `exam_score` 带学生姓名/学号/考试/课程/学分，`exam_monitor` 带考试名/时间/考场/教师名，`exam_retake` 带课程名/考试名，`upgrade_apply` 带学生姓名，`exam_apply` 带课程名/教师名（`@TableField(exist=false)` + Service 批量填充，无 N+1）                                                                                                                                               |
+| 7   | `GET /api/teacher-attendance/list-by-teacher`                   | 本人区间考勤，替代"逐日拉全校再筛本人"                                                                                                                                                                                                                                                                                                                                                |
+| 8   | `data.sql` 密码改为 BCrypt 哈希                                 | 种子账号由"登不进去"变为可直接登录；登录名与学号/工号对齐                                                                                                                                                                                                                                                                                                                             |
+| 9   | 成绩保存校验收紧                                                | 分数必须 0~100、学生ID非空、考试必须存在                                                                                                                                                                                                                                                                                                                                              |
+| 10  | **补齐 `classroom_apply` 建表脚本**                             | 队友的教室申请代码齐全，但 `schema.sql` 里漏了这张表（一跑就报"表不存在"）；已补建表 + 种子数据 + `数据库设计.md` 登记                                                                                                                                                                                                                                                                |
+| 11  | 教室申请接口修正                                                | ① 申请人改为**以当前登录人为准**（原来信任请求体，可冒名提交，且 `applicant` 为 NOT NULL 会插入失败）；② `PUT /{id}/approve` 补 `@PreAuthorize("hasRole('ADMIN')")`（原来任何登录用户都能审批）；③ approve/reject 增加"仅待审核可审批"校验（原来可重复审批）；④ `GET /api/classroom-applies?status=` 原来忽略 status 参数，已生效；⑤ 新增 `PUT /{id}/cancel` 撤回（仅本人、仅待审核） |
+| 12  | **新增表 `course_adjust`（调课申请）**                          | 教师提交「原时间 → 调整后时间」的调课申请，管理端审批；含 entity/mapper/service/controller、`schema.sql`、`data.sql` 种子数据与 `数据库设计.md` 登记                                                                                                                                                                                                                                  |
+| 13  | 调课申请接口 `/api/course-adjusts`                              | `POST` 提交（teacherId 由服务端按登录人解析，非教师拒绝）、`GET /my` 我的调课、`GET ?status=` 审批列表（`@PreAuthorize` ADMIN）、`PUT /{id}/approve                                                                                                                                                                                                                                   | reject`（ADMIN + 仅待审核）、`PUT /{id}/cancel`（仅本人、仅待审核） |
+| 14  | **`base_teaching_task` 增加上课时间字段**                       | `weekday` / `start_section` / `end_section` / `classroom_id` / `weeks`，并给 `TeachingTaskController` 增加 `?classId=` 查询；返回体带课程/班级/教师/教室名称，课表页可直接渲染                                                                                                                                                                                                        |
 
 ## 仍待后端处理的缺口
 
-| # | 缺口 | 影响页面 | 建议 |
-| --- | --- | --- | --- |
-| 1 | **写接口鉴权只做了一半** | 全部 | 机制已具备（`ROLE_*` authorities + `@EnableMethodSecurity`），教室申请/调课已加 `@PreAuthorize`，但成绩保存、教学日志、考勤录入等写接口仍对任何登录用户开放 |
-| 2 | **成绩录入无归属校验** | 成绩录入 | `GET /api/exams` 返回全部考试、保存只按 examId 校验 → 教师可给非本人任教的考试录改成绩。任课表已就绪，可用 `TeachingTaskService.teachesCourse` 校验 |
-| 3 | **调课缺少冲突校验** | 我的调课 | 提交时未校验"调整后时间该教师/班级/教室是否已有安排"（需要一张全校课表视图才能判），目前只做原时间≠新时间与必填校验 |
-| 4 | `student_attendance` 记录缺 `classId` | 学生考勤 | 周报表按 `classId` 统计，而录入时只有 `studentId/courseId/date/status`；合班课时口径可能不一致 |
-| 5 | `weekly-report` 字段契约未固化 | 学生考勤 | 后端返回 `List<Map>`，字段（`normal/late/absent/leave/total/rate`）需固化 |
-| 6 | 签到统计口径 | 我的签到 | `stat-by-date` 把"缺勤"计入"未签到"（已同时返回 `unchecked`），与 `list-by-date` 展示口径建议统一 |
-| 7 | 教学日志无修改/删除接口 | 教学日志 | 写错只能再提一条；且不校验班级/课程是否属于该教师 |
-| 8 | 响应契约仍是 `code:200` + `message` | 全部 | 师生端请求层已双契约兼容；`admin` 也已自行适配，后端统一会更干净 |
-| 9 | 管理端页面未跟上 | 管理端 | 教室申请审批、调课审批的**后端接口已就绪**（含 `@PreAuthorize` ADMIN），但 `admin` 工程对应页面仍走 mock，需要管理端同学切换到真实接口 |
+| #   | 缺口                                  | 影响页面 | 建议                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --- | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **写接口鉴权只做了一半**              | 全部     | 机制已具备（`ROLE_*` authorities + `@EnableMethodSecurity`），教室申请/调课已加 `@PreAuthorize`，但成绩保存、教学日志、考勤录入等写接口仍对任何登录用户开放                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2   | **成绩录入无归属校验**                | 成绩录入 | `GET /api/exams` 返回全部考试、保存只按 examId 校验 → 教师可给非本人任教的考试录改成绩。任课表已就绪，可用 `TeachingTaskService.teachesCourse` 校验                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 3   | **调课缺少冲突校验**                  | 我的调课 | 提交时未校验"调整后时间该教师/班级/教室是否已有安排"（需要一张全校课表视图才能判），目前只做原时间≠新时间与必填校验                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 4   | `student_attendance` 记录缺 `classId` | 学生考勤 | 周报表按 `classId` 统计，而录入时只有 `studentId/courseId/date/status`；合班课时口径可能不一致                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 5   | `weekly-report` 字段契约未固化        | 学生考勤 | 后端返回 `List<Map>`，字段（`normal/late/absent/leave/total/rate`）需固化                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 6   | 签到统计口径                          | 我的签到 | `stat-by-date` 把"缺勤"计入"未签到"（已同时返回 `unchecked`），与 `list-by-date` 展示口径建议统一                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 7   | 教学日志无修改/删除接口               | 教学日志 | 写错只能再提一条；且不校验班级/课程是否属于该教师                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 8   | 响应契约仍是 `code:200` + `message`   | 全部     | 师生端请求层已双契约兼容；`admin` 也已自行适配，后端统一会更干净                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 9   | 管理端审批页接口路径与后端不一致      | 管理端   | 管理端**页面已存在**（`admin/src/views/course-adjust/audit-list.vue`、`classroom-apply/index.vue`），且 `request.ts` 已改判 `code === 200`、`vite.config.ts` 已配 `/api` → `8080` 代理（`vite-plugin-mock` 已从配置移除），**但这两组接口仍写着旧 Mock 路径**：`GET /course-adjust/audit/list`、`PUT /course-adjust/approve/{id}`、`PUT /course-adjust/reject/{id}`、`GET /classroom/approval/list`、`PUT /classroom/approve/{id}`、`PUT /classroom/reject/{id}`。后端实际是 `GET /api/course-adjusts?status=`、`GET /api/classroom-applies?status=` + `PUT /{id}/approve | reject`（RESTful 复数资源）→ 直接联调会 404。字段也需对齐：后端调课表返回 `originDate/originSlot/targetDate/targetSlot/teacherName/courseName/className/roomName`，管理端类型写的是 `originalTime/newTime/teacher` |
 
 ## 与后端联调
 
@@ -148,7 +165,7 @@ src
 
 ## 验证状态
 
-- 师生端：`vue-tsc -b` 零错误、`vite build` 通过；Mock 端到端冒烟 **19/19**（含新 RESTful 路径、教室申请提交/冲突拦截/撤回、学生与教师"我的申请"相互隔离）
+- 师生端：`vue-tsc -b` 零错误、`vite build` 通过；Mock 端到端冒烟 **19/19**（含新 RESTful 路径、教室申请提交/冲突拦截/撤回、学生与教师"我的申请"相互隔离）；考试信息页另做 5/5 冒烟（学期列表、考试列表带学期与起止时间、按名称筛选、按学期筛选命中/为空）
 - 后端：`mvn -DskipTests compile` **BUILD SUCCESS**
 - **真实端到端联调（2026-09-13 实测）**：用临时 MySQL 实例 + 真实后端（连临时库）跑通
   - 学生 `2023005001/123456`、教师 `T001/123456`、管理员 `admin/123456` 三者登录成功（BCrypt 生效）
@@ -162,10 +179,11 @@ src
 
 ## 下一步
 
-**师生端业务页面与工程化收尾已全部完成**：19 个页面（学生端 5 + 教师端 8 + 共用 2 + 登录/首页/Layout/404）、
-首页待办、成绩导出 Excel、班级花名册、公共三态组件、ESLint + Prettier、真实端到端联调。
+**师生端业务页面与工程化收尾已全部完成**：20 个页面（学生端 6 + 教师端 8 + 学生/教师共用 2（课表、教室申请）+ 登录/首页/Layout/404）、
+首页待办、成绩导出 Excel、班级花名册、公共四件套组件、视觉与后台管理端对齐、ESLint + Prettier、真实端到端联调。
 
 后续可选（按优先级）：
-1. 把历史页面逐步迁移到 `PageState` / `StatBar`（新页面已在用，旧页面目前各自实现三态）；
-2. 管理端（`admin`）把教室申请审批、调课审批从 mock 切到真实接口（后端已就绪）；
-3. 后端侧遗留：成绩保存的任课归属校验、教学日志/考勤录入的角色鉴权、响应契约统一（详见上文缺口清单）。
+
+1. 管理端（`admin`）把教室申请审批、调课审批从 mock 切到真实接口（后端已就绪）；
+2. 后端侧遗留：成绩保存的任课归属校验、教学日志/考勤录入的角色鉴权、响应契约统一（详见上文缺口清单）；
+3. 调课提交时增加"教师/班级/教室时间冲突"校验（需要全校课表视图，详见缺口清单第 3 条）。

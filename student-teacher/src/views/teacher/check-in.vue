@@ -5,6 +5,8 @@
  *          （本人近 7 天记录，1 次请求即可，无需逐日拉全校再筛本人）
  *         GET  /api/teacher-attendance/stat-by-date?date（全校当日统计）
  *         POST /api/teacher-attendance/check-in/{teacherId}（重复签到会返回失败）
+ *
+ * 结构：顶部卡片头（PageHeader + 主操作 + StatBar）+ PageState 三态。
  */
 import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
@@ -12,6 +14,9 @@ import { checkIn, listMyAttendance, statByDate } from '@/api/teacherAttendance'
 import type { TeacherAttendanceRecord, TeacherAttendanceStat } from '@/api/teacherAttendance'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { ATTENDANCE_STATUS_TYPE } from '@/constants/dict'
 import { addDays, todayStr } from '@/utils/format'
 
@@ -67,6 +72,13 @@ const statView = computed(() => {
   return { total, checked, unchecked: Number(stat.value.unchecked ?? total - checked) }
 })
 
+/** 统计条数据（对齐公共组件 StatBar）：今日全校签到概览 */
+const summaryItems = computed(() => [
+  { label: '教师总数', value: statView.value.total },
+  { label: '已签到', value: statView.value.checked },
+  { label: '未签到', value: statView.value.unchecked },
+])
+
 /** 签到按钮文案：已有记录时仍可点击，重复签到由接口返回失败并 toast */
 const checkButtonText = computed(() => {
   if (!myToday.value) {
@@ -121,63 +133,42 @@ onMounted(reloadAll)
     </van-empty>
 
     <template v-else>
-      <!-- 今日签到卡 -->
-      <div class="st-card check__today">
-        <div class="check__date">{{ today }}</div>
-        <div class="check__status">
-          <van-tag
-            v-if="myToday"
-            size="large"
-            :type="ATTENDANCE_STATUS_TYPE[myToday?.status ?? ''] || 'primary'"
-          >
-            {{ myToday.status }}
-          </van-tag>
-          <van-tag v-else size="large" type="warning">未签到</van-tag>
+      <!-- 顶部：标题 + 主操作 + 今日签到 + 概览（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="我的签到">
+          <template #actions>
+            <van-button size="small" type="primary" :loading="submitting" @click="onCheckIn">
+              {{ checkButtonText }}
+            </van-button>
+          </template>
+        </PageHeader>
+
+        <!-- 今日签到状态 -->
+        <div class="check__today">
+          <div class="check__date">{{ today }}</div>
+          <div class="check__status">
+            <van-tag
+              v-if="myToday"
+              size="large"
+              :type="ATTENDANCE_STATUS_TYPE[myToday?.status ?? ''] || 'primary'"
+            >
+              {{ myToday.status }}
+            </van-tag>
+            <van-tag v-else size="large" type="warning">未签到</van-tag>
+          </div>
+          <div class="st-muted">
+            {{
+              myToday
+                ? `签到时间 ${timeText(myToday.checkTime) || myToday.checkTime || '—'}`
+                : '今日暂无签到记录'
+            }}
+          </div>
         </div>
-        <div class="st-muted">
-          {{
-            myToday
-              ? `签到时间 ${timeText(myToday.checkTime) || myToday.checkTime || '—'}`
-              : '今日暂无签到记录'
-          }}
-        </div>
-        <van-button
-          class="check__btn"
-          round
-          block
-          type="primary"
-          :loading="submitting"
-          @click="onCheckIn"
-        >
-          {{ checkButtonText }}
-        </van-button>
+
+        <StatBar :items="summaryItems" />
       </div>
 
-      <div v-if="loading && myRecords.length === 0" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reloadAll">重新加载</van-button>
-      </van-empty>
-
-      <template v-else>
-        <!-- 今日全校签到统计 -->
-        <div class="st-card check__stat">
-          <div class="check__stat-item">
-            <div class="check__stat-value">{{ statView.total }}</div>
-            <div class="st-muted">教师总数</div>
-          </div>
-          <div class="check__stat-item">
-            <div class="check__stat-value">{{ statView.checked }}</div>
-            <div class="st-muted">已签到</div>
-          </div>
-          <div class="check__stat-item">
-            <div class="check__stat-value">{{ statView.unchecked }}</div>
-            <div class="st-muted">未签到</div>
-          </div>
-        </div>
-
+      <PageState :loading="loading && myRecords.length === 0" :error="error" @retry="reloadAll">
         <!-- 我最近 7 天的记录 -->
         <div class="st-section-title">我最近 7 天的记录</div>
         <div v-for="row in recent" :key="row.date" class="st-card st-row">
@@ -194,13 +185,14 @@ onMounted(reloadAll)
             <span class="st-muted">{{ timeText(row.checkTime) }}</span>
           </span>
         </div>
-      </template>
+      </PageState>
     </template>
   </div>
 </template>
 
 <style scoped>
 .check__today {
+  margin-bottom: 12px;
   text-align: center;
 }
 .check__date {
@@ -209,18 +201,6 @@ onMounted(reloadAll)
 }
 .check__status {
   margin: 10px 0 6px;
-}
-.check__btn {
-  margin-top: 14px;
-}
-.check__stat {
-  display: flex;
-  justify-content: space-around;
-  text-align: center;
-}
-.check__stat-value {
-  font-size: 20px;
-  font-weight: 600;
 }
 .check__recent-right {
   display: flex;

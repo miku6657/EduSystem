@@ -6,7 +6,7 @@
  *
  * 页面结构对齐 admin：卡片头（标题/操作）+ 筛选栏 + 列表 + 分页。
  */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { pageExams } from '@/api/exam'
 import type { ExamInfo } from '@/api/exam'
 import { listTerms } from '@/api/term'
@@ -96,6 +96,7 @@ function onFilterChange() {
   void reload()
 }
 
+/** 翻页：page 由本函数与筛选变更显式驱动，不用 watch，避免一次操作发两次请求 */
 function goPage(target: number) {
   if (target < 1 || target > pageCount.value || target === page.value) {
     return
@@ -103,8 +104,6 @@ function goPage(target: number) {
   page.value = target
   void reload()
 }
-
-watch(page, () => void reload())
 
 onMounted(async () => {
   try {
