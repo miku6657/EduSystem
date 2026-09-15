@@ -10,62 +10,107 @@ import java.util.List;
 
 /**
  * 毕业生管理接口
- * <p>毕业证编号生成、上报库查询</p>
+ *
+ * 毕业证编号生成、毕业生上报库查询
  */
 @RestController
-@RequestMapping("/api/graduate-student")
+@RequestMapping("/api/graduate-students")
 @RequiredArgsConstructor
 public class GraduateStudentController {
 
     private final GraduateStudentService graduateStudentService;
 
+
     /**
      * 新增毕业生记录
+     *
+     * POST /api/graduate-students
      */
     @PostMapping
-    public Result<Void> save(@RequestBody GraduateStudent graduateStudent) {
+    public Result<Void> save(
+            @RequestBody GraduateStudent graduateStudent
+    ) {
         graduateStudentService.save(graduateStudent);
         return Result.success();
     }
 
-    /**
-     * 为单条记录生成毕业证编号
-     */
-    @PutMapping("/generate-no/{id}")
-    public Result<String> generateNo(@PathVariable Long id) {
-        return Result.success(graduateStudentService.generateCertificateNo(id));
-    }
 
     /**
-     * 批量为某届未编号的毕业生生成毕业证编号
+     * 生成单个毕业证编号
+     *
+     * PUT /api/graduate-students/{id}/certificate-no
      */
-    @PutMapping("/batch-generate-no/{graduateYear}")
-    public Result<Integer> batchGenerateNo(@PathVariable String graduateYear) {
-        return Result.success(graduateStudentService.batchGenerateCertificateNo(graduateYear));
+    @PutMapping("/{id}/certificate-no")
+    public Result<String> generateNo(
+            @PathVariable Long id
+    ) {
+        return Result.success(
+                graduateStudentService.generateCertificateNo(id)
+        );
     }
 
+
     /**
-     * 按届查询毕业生列表（生成上报库 / 打印毕业证）
+     * 批量生成毕业证编号
+     *
+     * PUT /api/graduate-students/year/{graduateYear}/certificate-no
      */
-    @GetMapping("/list-by-year/{graduateYear}")
-    public Result<List<GraduateStudent>> listByYear(@PathVariable String graduateYear) {
-        return Result.success(graduateStudentService.listByYear(graduateYear));
+    @PutMapping("/year/{graduateYear}/certificate-no")
+    public Result<Integer> batchGenerateNo(
+            @PathVariable String graduateYear
+    ) {
+        return Result.success(
+                graduateStudentService.batchGenerateCertificateNo(
+                        graduateYear
+                )
+        );
     }
+
+
+    /**
+     * 按毕业年份查询毕业生列表
+     *
+     * GET /api/graduate-students/year/{graduateYear}
+     */
+    @GetMapping("/year/{graduateYear}")
+    public Result<List<GraduateStudent>> listByYear(
+            @PathVariable String graduateYear
+    ) {
+        return Result.success(
+                graduateStudentService.listByYear(
+                        graduateYear
+                )
+        );
+    }
+
 
     /**
      * 修改毕业生记录
+     *
+     * PUT /api/graduate-students/{id}
      */
-    @PutMapping
-    public Result<Void> update(@RequestBody GraduateStudent graduateStudent) {
-        graduateStudentService.updateById(graduateStudent);
+    @PutMapping("/{id}")
+    public Result<Void> update(
+            @PathVariable Long id,
+            @RequestBody GraduateStudent graduateStudent
+    ) {
+        graduateStudent.setId(id);
+        graduateStudentService.updateById(
+                graduateStudent
+        );
         return Result.success();
     }
 
+
     /**
      * 删除毕业生记录
+     *
+     * DELETE /api/graduate-students/{id}
      */
     @DeleteMapping("/{id}")
-    public Result<Void> remove(@PathVariable Long id) {
+    public Result<Void> remove(
+            @PathVariable Long id
+    ) {
         graduateStudentService.removeById(id);
         return Result.success();
     }

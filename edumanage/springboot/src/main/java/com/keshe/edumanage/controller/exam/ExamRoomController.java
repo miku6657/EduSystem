@@ -22,12 +22,13 @@ public class ExamRoomController {
     @GetMapping
     public Result<List<ExamRoom>> list(
             @RequestParam(required = false) Long examId
-    ){
-        if(examId != null){
+    ) {
+        if (examId != null) {
             return Result.success(
                     examRoomService.listByExam(examId)
             );
         }
+
         return Result.success(
                 examRoomService.list()
         );
@@ -40,7 +41,7 @@ public class ExamRoomController {
     @GetMapping("/{id}")
     public Result<ExamRoom> getById(
             @PathVariable Long id
-    ){
+    ) {
         return Result.success(
                 examRoomService.getById(id)
         );
@@ -53,7 +54,7 @@ public class ExamRoomController {
     @PostMapping
     public Result<Void> save(
             @RequestBody ExamRoom examRoom
-    ){
+    ) {
         examRoomService.save(examRoom);
         return Result.success();
     }
@@ -66,7 +67,7 @@ public class ExamRoomController {
     public Result<Void> update(
             @PathVariable Long id,
             @RequestBody ExamRoom examRoom
-    ){
+    ) {
         examRoom.setId(id);
         examRoomService.updateById(examRoom);
         return Result.success();
@@ -79,7 +80,7 @@ public class ExamRoomController {
     @DeleteMapping("/{id}")
     public Result<Void> remove(
             @PathVariable Long id
-    ){
+    ) {
         examRoomService.removeById(id);
         return Result.success();
     }

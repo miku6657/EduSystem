@@ -12,43 +12,67 @@ import java.util.Map;
 
 /**
  * 学生考勤接口
- * <p>批量点名、出勤查询、班级周考勤报表</p>
+ *
+ * 批量点名、出勤查询、班级周考勤报表
  */
 @RestController
-@RequestMapping("/api/student-attendance")
+@RequestMapping("/api/student-attendances")
 @RequiredArgsConstructor
 public class StudentAttendanceController {
 
     private final StudentAttendanceService studentAttendanceService;
 
+
     /**
-     * 批量录入学生考勤（同学生同课程同日期已有记录时覆盖更新）
+     * 批量录入学生考勤
+     *
+     * POST /api/student-attendances
      */
-    @PostMapping("/record")
-    public Result<Void> record(@RequestBody List<StudentAttendance> records) {
+    @PostMapping
+    public Result<Void> record(
+            @RequestBody List<StudentAttendance> records
+    ) {
         studentAttendanceService.recordBatch(records);
         return Result.success();
     }
 
-    /**
-     * 查询某位学生在日期区间内的考勤记录
-     */
-    @GetMapping("/list-by-student")
-    public Result<List<StudentAttendance>> listByStudent(
-            @RequestParam Long studentId,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate) {
-        return Result.success(
-                studentAttendanceService.listByStudent(studentId, startDate, endDate));
-    }
 
     /**
-     * 班级学生周考勤报表（date 传该周任意一天）
+     * 查询学生考勤记录
+     *
+     * GET /api/student-attendances/students/{studentId}
+     */
+    @GetMapping("/students/{studentId}")
+    public Result<List<StudentAttendance>> listByStudent(
+            @PathVariable Long studentId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
+    ) {
+        return Result.success(
+                studentAttendanceService.listByStudent(
+                        studentId,
+                        startDate,
+                        endDate
+                )
+        );
+    }
+
+
+    /**
+     * 班级周考勤报表
+     *
+     * GET /api/student-attendances/weekly-report
      */
     @GetMapping("/weekly-report")
     public Result<List<Map<String, Object>>> weeklyReport(
             @RequestParam Long classId,
-            @RequestParam LocalDate date) {
-        return Result.success(studentAttendanceService.weeklyReport(classId, date));
+            @RequestParam LocalDate date
+    ) {
+        return Result.success(
+                studentAttendanceService.weeklyReport(
+                        classId,
+                        date
+                )
+        );
     }
 }

@@ -13,49 +13,80 @@ import java.util.Map;
 
 /**
  * 教师考勤接口
- * <p>教师签到、指纹考勤数据导入、出勤统计</p>
+ *
+ * 教师签到、指纹考勤数据导入、出勤统计
  */
 @RestController
-@RequestMapping("/api/teacher-attendance")
+@RequestMapping("/api/teacher-attendances")
 @RequiredArgsConstructor
 public class TeacherAttendanceController {
 
     private final TeacherAttendanceService teacherAttendanceService;
 
+
     /**
-     * 教师签到（一天一次）
+     * 教师签到
+     *
+     * POST /api/teacher-attendances/{teacherId}/check-in
      */
-    @PostMapping("/check-in/{teacherId}")
-    public Result<Void> checkIn(@PathVariable Long teacherId) {
+    @PostMapping("/{teacherId}/check-in")
+    public Result<Void> checkIn(
+            @PathVariable Long teacherId
+    ) {
         teacherAttendanceService.checkIn(teacherId);
         return Result.success();
     }
 
+
     /**
      * 导入指纹考勤数据
+     *
+     * POST /api/teacher-attendances/import
      */
     @PostMapping("/import")
-    public Result<Void> importAttendance(@RequestParam Long teacherId,
-                                         @RequestParam LocalDate attendanceDate,
-                                         @RequestParam String status,
-                                         @RequestParam LocalDateTime checkTime) {
-        teacherAttendanceService.importAttendance(teacherId, attendanceDate, status, checkTime);
+    public Result<Void> importAttendance(
+            @RequestParam Long teacherId,
+            @RequestParam LocalDate attendanceDate,
+            @RequestParam String status,
+            @RequestParam LocalDateTime checkTime
+    ) {
+        teacherAttendanceService.importAttendance(
+                teacherId,
+                attendanceDate,
+                status,
+                checkTime
+        );
+
         return Result.success();
     }
 
-    /**
-     * 查询某天的教师考勤记录
-     */
-    @GetMapping("/list-by-date")
-    public Result<List<TeacherAttendance>> listByDate(@RequestParam LocalDate date) {
-        return Result.success(teacherAttendanceService.listByDate(date));
-    }
 
     /**
-     * 某天的教师出勤统计（教师总数、已签到人数、未签到人数）
+     * 查询某天教师考勤记录
+     *
+     * GET /api/teacher-attendances?date=2026-09-15
      */
-    @GetMapping("/stat-by-date")
-    public Result<Map<String, Object>> statByDate(@RequestParam LocalDate date) {
-        return Result.success(teacherAttendanceService.statByDate(date));
+    @GetMapping
+    public Result<List<TeacherAttendance>> listByDate(
+            @RequestParam LocalDate date
+    ) {
+        return Result.success(
+                teacherAttendanceService.listByDate(date)
+        );
+    }
+
+
+    /**
+     * 教师出勤统计
+     *
+     * GET /api/teacher-attendances/statistics?date=2026-09-15
+     */
+    @GetMapping("/statistics")
+    public Result<Map<String, Object>> statByDate(
+            @RequestParam LocalDate date
+    ) {
+        return Result.success(
+                teacherAttendanceService.statByDate(date)
+        );
     }
 }

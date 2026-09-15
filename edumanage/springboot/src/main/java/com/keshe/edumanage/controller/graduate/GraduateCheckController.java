@@ -12,34 +12,58 @@ import java.util.List;
  * 毕业资格审核接口
  */
 @RestController
-@RequestMapping("/api/graduate-check")
+@RequestMapping("/api/graduate-checks")
 @RequiredArgsConstructor
 public class GraduateCheckController {
 
     private final GraduateCheckService graduateCheckService;
 
+
     /**
-     * 保存审核结果（学分或课程未通过时，结论不允许为通过）
+     * 保存毕业资格审核结果
+     *
+     * POST /api/graduate-checks/audit
      */
     @PostMapping("/audit")
-    public Result<Void> audit(@RequestBody GraduateCheck check) {
+    public Result<Void> audit(
+            @RequestBody GraduateCheck check
+    ) {
         graduateCheckService.audit(check);
         return Result.success();
     }
 
-    /**
-     * 按审核结论查询（checkStatus：WAIT/PASS/FAIL，为空查全部）
-     */
-    @GetMapping("/list")
-    public Result<List<GraduateCheck>> list(@RequestParam(required = false) String checkStatus) {
-        return Result.success(graduateCheckService.listByStatus(checkStatus));
-    }
 
     /**
-     * 查询某位学生的审核记录
+     * 查询审核记录
+     *
+     * GET /api/graduate-checks
+     *
+     * checkStatus:
+     * WAIT
+     * PASS
+     * FAIL
      */
-    @GetMapping("/by-student/{studentId}")
-    public Result<GraduateCheck> getByStudent(@PathVariable Long studentId) {
-        return Result.success(graduateCheckService.getByStudent(studentId));
+    @GetMapping
+    public Result<List<GraduateCheck>> list(
+            @RequestParam(required = false) String checkStatus
+    ) {
+        return Result.success(
+                graduateCheckService.listByStatus(checkStatus)
+        );
+    }
+
+
+    /**
+     * 查询学生毕业审核记录
+     *
+     * GET /api/graduate-checks/students/{studentId}
+     */
+    @GetMapping("/students/{studentId}")
+    public Result<GraduateCheck> getByStudent(
+            @PathVariable Long studentId
+    ) {
+        return Result.success(
+                graduateCheckService.getByStudent(studentId)
+        );
     }
 }
