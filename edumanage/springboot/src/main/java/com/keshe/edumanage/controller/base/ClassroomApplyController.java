@@ -3,6 +3,7 @@ package com.keshe.edumanage.controller.base;
 import com.keshe.edumanage.common.result.Result;
 import com.keshe.edumanage.entity.base.ClassroomApply;
 import com.keshe.edumanage.service.base.ClassroomApplyService;
+import com.keshe.edumanage.vo.ClassroomApplyVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -48,11 +49,11 @@ public class ClassroomApplyController {
      * 我的申请
      */
     @GetMapping("/my")
-    public Result<List<ClassroomApply>> myList(
+    public Result<List<ClassroomApplyVO>> myList(
             Authentication authentication
     ) {
         return Result.success(
-                classroomApplyService.listByApplicant(
+                classroomApplyService.listByApplicantVO(
                         authentication.getName()
                 )
         );
@@ -60,13 +61,14 @@ public class ClassroomApplyController {
 
     /**
      * 审批列表
+     * GET /api/classroom-applies?status=待审核
      */
     @GetMapping
-    public Result<List<ClassroomApply>> list(
+    public Result<List<ClassroomApplyVO>> list(
             @RequestParam(required = false) String status
     ) {
         return Result.success(
-                classroomApplyService.list()
+                classroomApplyService.listVO(status)
         );
     }
 

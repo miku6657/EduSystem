@@ -2,8 +2,10 @@ package com.keshe.edumanage.service.base;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.keshe.edumanage.common.exception.BusinessException;
 import com.keshe.edumanage.entity.base.Course;
 import com.keshe.edumanage.mapper.base.CourseMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,8 +14,33 @@ import java.util.List;
  * 课程信息业务实现
  */
 @Service
+@RequiredArgsConstructor
 public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course>
         implements CourseService {
+
+    private final TeachingGroupService teachingGroupService;
+
+    @Override
+    public boolean save(Course course) {
+        validateTeachingGroup(course);
+        return super.save(course);
+    }
+
+    @Override
+    public boolean updateById(Course course) {
+        validateTeachingGroup(course);
+        return super.updateById(course);
+    }
+
+    /**
+     * 校验所属教研室存在
+     */
+    private void validateTeachingGroup(Course course) {
+        if (course.getTeachingGroupId() != null
+                && teachingGroupService.getById(course.getTeachingGroupId()) == null) {
+            throw new BusinessException("教研室不存在");
+        }
+    }
 
     @Override
     public Course getByCourseCode(String courseCode) {

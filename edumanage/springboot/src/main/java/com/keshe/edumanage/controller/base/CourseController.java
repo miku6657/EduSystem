@@ -29,8 +29,7 @@ public class CourseController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) Long teachingGroupId,
-            @RequestParam(required = false) String courseCode
+            @RequestParam(required = false) Long teachingGroupId
     ) {
         Page<Course> page = courseService.pageCourses(
                 new Page<>(pageNo, pageSize),

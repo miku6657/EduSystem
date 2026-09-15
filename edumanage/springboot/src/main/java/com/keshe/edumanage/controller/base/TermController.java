@@ -28,6 +28,15 @@ public class TermController {
     }
 
     /**
+     * 查询当前学期
+     * GET /api/terms/current
+     */
+    @GetMapping("/current")
+    public Result<Term> current() {
+        return Result.success(termService.getCurrentTerm());
+    }
+
+    /**
      * 查询学期详情
      * GET /api/terms/{id}
      */

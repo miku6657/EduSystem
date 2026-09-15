@@ -140,11 +140,15 @@ CREATE TABLE base_course (
     credit            DOUBLE       DEFAULT NULL COMMENT '学分',
     type              VARCHAR(20)  DEFAULT NULL COMMENT '课程类型',
     teaching_group_id BIGINT       DEFAULT NULL COMMENT '所属教研室ID',
+    teacher_id        BIGINT       DEFAULT NULL COMMENT '授课教师ID',
+    term_id           BIGINT       DEFAULT NULL COMMENT '学期ID',
     create_time       DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time       DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_course_code (course_code),
-    KEY idx_teaching_group_id (teaching_group_id)
+    KEY idx_teaching_group_id (teaching_group_id),
+    KEY idx_teacher_id (teacher_id),
+    KEY idx_term_id (term_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程信息表';
 
 -- 9. 教室信息表（占用/空闲使用状况）

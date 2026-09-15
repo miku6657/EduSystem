@@ -13,4 +13,6 @@ public class Course extends BaseEntity {
     private Double credit;
     private String type;
     private Long teachingGroupId;
+    private Long teacherId;
+    private Long termId;
 }
