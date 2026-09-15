@@ -11,6 +11,15 @@ export interface Term {
 }
 
 /**
+ * 学期列表（用于把考试/教学任务里的 termId 映射成学期名称）
+ * 后端 GET /api/terms
+ */
+export async function listTerms(): Promise<Term[]> {
+  const data = await http.get<Term[] | null>('/terms')
+  return Array.isArray(data) ? data : []
+}
+
+/**
  * 当前学期名称。
  *
  * 后端已把原 `/api/term/current` 改为 RESTful 的 `GET /api/terms`（返回学期列表），

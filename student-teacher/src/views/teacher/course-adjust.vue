@@ -15,6 +15,8 @@ import { pageClassrooms } from '@/api/classroom'
 import type { Classroom } from '@/api/classroom'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import StatBar from '@/components/StatBar.vue'
 import {
   AUDIT_STATUS_TEXT,
   AUDIT_STATUS_TYPE,
@@ -45,6 +47,13 @@ const summary = computed(() => {
     passed: rows.filter((row) => row.status === '已通过').length,
   }
 })
+
+/** 统计条数据（对齐公共组件 StatBar） */
+const summaryItems = computed(() => [
+  { label: '申请总数', value: summary.value.total },
+  { label: '待审核', value: summary.value.waiting },
+  { label: '已通过', value: summary.value.passed },
+])
 
 /** 状态标签颜色：复用在审状态字典，补齐"已撤销" */
 function statusType(status?: string) {
@@ -254,24 +263,15 @@ onMounted(reload)
     </van-empty>
 
     <template v-else>
-      <div class="st-card adjust__summary">
-        <div class="adjust__summary-item">
-          <div class="adjust__summary-value">{{ summary.total }}</div>
-          <div class="st-muted">申请总数</div>
-        </div>
-        <div class="adjust__summary-item">
-          <div class="adjust__summary-value">{{ summary.waiting }}</div>
-          <div class="st-muted">待审核</div>
-        </div>
-        <div class="adjust__summary-item">
-          <div class="adjust__summary-value">{{ summary.passed }}</div>
-          <div class="st-muted">已通过</div>
-        </div>
+      <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="调课申请">
+          <template #actions>
+            <van-button size="small" type="primary" @click="openForm">提交申请</van-button>
+          </template>
+        </PageHeader>
+        <StatBar :items="summaryItems" />
       </div>
-
-      <van-button class="adjust__action" round block type="primary" @click="openForm">
-        提交调课申请
-      </van-button>
 
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
         <div v-if="loading && !refreshing" class="st-empty">

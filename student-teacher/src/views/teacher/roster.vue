@@ -11,6 +11,7 @@ import { listMyClasses, listStudentsByClass } from '@/api/base'
 import type { ClassInfo, Student } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
 import PageState from '@/components/PageState.vue'
 import StatBar from '@/components/StatBar.vue'
 import { exportToExcel, timestampedFileName } from '@/utils/excel'
@@ -124,30 +125,34 @@ onMounted(async () => {
     </van-empty>
 
     <template v-else>
-      <van-field
-        :model-value="classText"
-        label="班级"
-        placeholder="请选择任教班级"
-        readonly
-        is-link
-        class="roster__picker"
-        @click="showClassPicker = true"
-      />
+      <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="班级花名册">
+          <template #actions>
+            <van-button
+              size="small"
+              type="primary"
+              :disabled="visibleStudents.length === 0"
+              @click="onExport"
+            >
+              导出 Excel
+            </van-button>
+          </template>
+        </PageHeader>
 
-      <StatBar :items="summary" />
+        <van-field
+          :model-value="classText"
+          label="班级"
+          placeholder="请选择任教班级"
+          readonly
+          is-link
+          @click="showClassPicker = true"
+        />
 
-      <div class="roster__toolbar">
-        <van-search v-model="keyword" placeholder="搜索学号 / 姓名" class="roster__search" />
-        <van-button
-          size="small"
-          type="primary"
-          plain
-          :disabled="visibleStudents.length === 0"
-          @click="onExport"
-        >
-          导出 Excel
-        </van-button>
+        <StatBar :items="summary" class="roster__stat" />
       </div>
+
+      <van-search v-model="keyword" class="roster__filter" placeholder="搜索学号 / 姓名" />
 
       <PageState
         :loading="loading || classLoading"

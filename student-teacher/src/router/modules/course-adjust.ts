@@ -1,12 +1,12 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-/** 教学管理（教师端）：我的调课（提交 / 查看 / 撤销） */
+/** 教学管理（教师端）：调课申请（提交 / 查看我的调课 / 撤销） */
 const courseAdjustRoutes: RouteRecordRaw[] = [
   {
     path: 'teacher/course-adjust',
     name: 'TeacherCourseAdjust',
     component: () => import('@/views/teacher/course-adjust.vue'),
-    meta: { title: '我的调课', icon: 'exchange', roles: ['teacher'] },
+    meta: { title: '调课申请', icon: 'exchange', roles: ['teacher'] },
   },
 ]
 

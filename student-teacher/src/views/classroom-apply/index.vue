@@ -17,6 +17,8 @@ import {
 import type { Classroom, ClassroomApply } from '@/api/classroom'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import StatBar from '@/components/StatBar.vue'
 import { CLASSROOM_APPLY_STATUS_TYPE, TIME_SLOT_OPTIONS } from '@/constants/dict'
 import { formatDate, formatDateTime, todayStr } from '@/utils/format'
 
@@ -43,6 +45,13 @@ const summary = computed(() => {
     passed: rows.filter((row) => row.status === '已通过').length,
   }
 })
+
+/** 统计条数据（对齐公共组件 StatBar） */
+const summaryItems = computed(() => [
+  { label: '申请总数', value: summary.value.total },
+  { label: '待审核', value: summary.value.waiting },
+  { label: '已通过', value: summary.value.passed },
+])
 
 /* ------------------------------ 提交表单 ------------------------------ */
 const showForm = ref(false)
@@ -211,25 +220,15 @@ onMounted(reload)
 
 <template>
   <div>
-    <!-- 概览 -->
-    <div class="st-card apply__summary">
-      <div class="apply__summary-item">
-        <div class="apply__summary-value">{{ summary.total }}</div>
-        <div class="st-muted">申请总数</div>
-      </div>
-      <div class="apply__summary-item">
-        <div class="apply__summary-value">{{ summary.waiting }}</div>
-        <div class="st-muted">待审核</div>
-      </div>
-      <div class="apply__summary-item">
-        <div class="apply__summary-value">{{ summary.passed }}</div>
-        <div class="st-muted">已通过</div>
-      </div>
+    <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="教室申请">
+        <template #actions>
+          <van-button size="small" type="primary" @click="openForm">提交申请</van-button>
+        </template>
+      </PageHeader>
+      <StatBar :items="summaryItems" />
     </div>
-
-    <van-button class="apply__action" round block type="primary" @click="openForm">
-      提交教室申请
-    </van-button>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <div v-if="loading && !refreshing" class="st-empty">

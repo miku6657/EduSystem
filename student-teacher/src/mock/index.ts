@@ -1091,7 +1091,10 @@ function handleApi(ctx: MockContext) {
 
   if (path === '/api/exams') {
     const name = String(query.name ?? '')
-    const list = exams.filter((item) => !name || String(item.name).includes(name))
+    const termId = Number(query.termId ?? 0)
+    const list = exams
+      .filter((item) => !name || String(item.name).includes(name))
+      .filter((item) => !termId || item.termId === termId)
     return ok(paged(list, query))
   }
 
