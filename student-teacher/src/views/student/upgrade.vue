@@ -3,6 +3,8 @@
  * 学生 · 专升本报名
  * 数据源：GET /api/upgrade-apply/my/list?studentId（缺口接口，见 api/upgrade.ts 注释）
  * 提交：POST /api/upgrade-apply/apply，body 为 UpgradeApply
+ *
+ * 结构对齐 scores.vue：顶部卡片头（PageHeader + 主操作）+ 下拉刷新 + PageState 三态。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
@@ -10,6 +12,9 @@ import { listMyUpgradeApplies, submitUpgradeApply } from '@/api/upgrade'
 import type { UpgradeApply } from '@/api/upgrade'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { formatDateTime } from '@/utils/format'
 import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, dictText } from '@/constants/dict'
 
@@ -21,13 +26,25 @@ const submitting = ref(false)
 /** 报名表单：院校 / 专业必填，备注选填 */
 const form = reactive({ schoolName: '', majorName: '', remark: '' })
 
-const { data: applies, loading, error, reload } = useAsyncData<UpgradeApply[]>(
+const {
+  data: applies,
+  loading,
+  error,
+  reload,
+} = useAsyncData<UpgradeApply[]>(
   () => (userStore.businessId ? listMyUpgradeApplies(userStore.businessId) : Promise.resolve([])),
   [],
 )
 
 /** 是否已有待审核的报名（Mock/后端都会拒绝重复报名，前端提前提示） */
 const hasPending = computed(() => applies.value.some((row) => row.applyStatus === 'WAIT'))
+
+/** 统计条数据（对齐公共组件 StatBar）：全部由本人报名列表派生，不新增接口 */
+const summaryItems = computed(() => [
+  { label: '报名总数', value: applies.value.length },
+  { label: '待审核', value: applies.value.filter((row) => row.applyStatus === 'WAIT').length },
+  { label: '已通过', value: applies.value.filter((row) => row.applyStatus === 'PASS').length },
+])
 
 /** 状态文案：WAIT 待审核 / PASS 已通过 / FAIL 已驳回 */
 function statusTextOf(row: UpgradeApply): string {
@@ -97,6 +114,16 @@ onMounted(reload)
 
 <template>
   <div>
+    <!-- 顶部：标题 + 主操作（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="专升本报名">
+        <template #actions>
+          <van-button size="small" type="primary" @click="openForm">我要报名</van-button>
+        </template>
+      </PageHeader>
+      <StatBar :items="summaryItems" />
+    </div>
+
     <!-- 报名条件说明（静态） -->
     <div class="st-card">
       <div class="upgrade__title">报名条件说明</div>
@@ -108,25 +135,22 @@ onMounted(reload)
       </ul>
     </div>
 
-    <van-button class="upgrade__actions" round block type="primary" @click="openForm">
-      我要报名
-    </van-button>
-
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-empty v-if="!userStore.businessId" description="未解析到学号，请确认登录账号为学号" />
-
-      <div v-else-if="loading && !refreshing" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="applies.length === 0" description="暂无专升本报名记录" />
-
-      <template v-else>
-        <div v-for="row in applies" :key="row.id ?? `${row.schoolName}-${row.majorName}`" class="st-card">
+      <!-- 未解析到学号时优先提示、不发请求，因此不进入加载态 -->
+      <PageState
+        :loading="loading && !refreshing && !!userStore.businessId"
+        :error="error"
+        :empty="!userStore.businessId || applies.length === 0"
+        :empty-text="
+          userStore.businessId ? '暂无专升本报名记录' : '未解析到学号，请确认登录账号为学号'
+        "
+        @retry="reload"
+      >
+        <div
+          v-for="row in applies"
+          :key="row.id ?? `${row.schoolName}-${row.majorName}`"
+          class="st-card"
+        >
           <div class="st-row">
             <div class="upgrade__school">{{ row.schoolName || '—' }}</div>
             <van-tag :type="statusTypeOf(row)">{{ statusTextOf(row) }}</van-tag>
@@ -141,7 +165,7 @@ onMounted(reload)
           </div>
           <div v-if="row.remark" class="upgrade__remark st-muted">备注：{{ row.remark }}</div>
         </div>
-      </template>
+      </PageState>
     </van-pull-refresh>
 
     <!-- 报名表单 -->
@@ -177,7 +201,9 @@ onMounted(reload)
           />
         </van-cell-group>
         <div class="upgrade__popup-actions">
-          <van-button round block type="primary" native-type="submit" :loading="submitting">提交报名</van-button>
+          <van-button round block type="primary" native-type="submit" :loading="submitting"
+            >提交报名</van-button
+          >
         </div>
       </van-form>
     </van-popup>
@@ -185,21 +211,44 @@ onMounted(reload)
 </template>
 
 <style scoped>
-.upgrade__title { margin-bottom: 8px; font-size: 15px; font-weight: 600; }
+.upgrade__title {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.upgrade__conditions { padding-left: 18px; margin: 0; line-height: 1.7; }
+.upgrade__conditions {
+  padding-left: 18px;
+  margin: 0;
+  line-height: 1.7;
+}
 
-.upgrade__conditions li { margin-bottom: 2px; }
+.upgrade__conditions li {
+  margin-bottom: 2px;
+}
 
-.upgrade__actions { margin-bottom: 12px; }
+.upgrade__school {
+  font-size: 15px;
+  font-weight: 600;
+}
 
-.upgrade__school { font-size: 15px; font-weight: 600; }
+.upgrade__line {
+  margin-top: 4px;
+}
 
-.upgrade__line { margin-top: 4px; }
+.upgrade__remark {
+  margin-top: 8px;
+  line-height: 1.5;
+}
 
-.upgrade__remark { margin-top: 8px; line-height: 1.5; }
+.upgrade__popup-title {
+  padding: 14px 16px 6px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
 
-.upgrade__popup-title { padding: 14px 16px 6px; font-size: 16px; font-weight: 600; text-align: center; }
-
-.upgrade__popup-actions { padding: 8px 16px 20px; }
+.upgrade__popup-actions {
+  padding: 8px 16px 20px;
+}
 </style>

@@ -24,6 +24,12 @@ const studentRoutes: RouteRecordRaw[] = [
     meta: { title: '补考重修', icon: 'todo-list-o', roles: ['student'], tabbar: true },
   },
   {
+    path: 'student/exams',
+    name: 'StudentExams',
+    component: () => import('@/views/student/exams.vue'),
+    meta: { title: '考试信息', icon: 'orders-o', roles: ['student'] },
+  },
+  {
     path: 'student/upgrade',
     name: 'StudentUpgrade',
     component: () => import('@/views/student/upgrade.vue'),

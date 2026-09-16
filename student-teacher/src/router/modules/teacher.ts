@@ -33,6 +33,12 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '考核方式申报', icon: 'description', roles: ['teacher'] },
   },
   {
+    path: 'teacher/roster',
+    name: 'TeacherRoster',
+    component: () => import('@/views/teacher/roster.vue'),
+    meta: { title: '班级花名册', icon: 'contact', roles: ['teacher'] },
+  },
+  {
     path: 'teacher/invigilation',
     name: 'TeacherInvigilation',
     component: () => import('@/views/teacher/invigilation.vue'),

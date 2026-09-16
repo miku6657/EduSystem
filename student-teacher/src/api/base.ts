@@ -35,48 +35,47 @@ export interface Course {
 
 /**
  * 分页查询班级
- * 后端 GET /api/class/page?pageNo&pageSize&keyword&grade&majorId
+ * 后端 GET /api/classes?pageNo&pageSize&keyword&grade&majorId
  */
 export function pageClasses(
   query: PageQuery & { keyword?: string; grade?: string; majorId?: number },
 ): Promise<PageResult<ClassInfo>> {
-  return getPage<ClassInfo>('/class/page', pageParams(query))
+  return getPage<ClassInfo>('/classes', pageParams(query))
 }
 
 /**
  * 查询某班级的学生
- * 后端 GET /api/student/list-by-class/{classId}
+ * 后端 GET /api/students?classId={classId}（RESTful 风格：同一资源用 query 过滤）
  */
 export async function listStudentsByClass(classId: number): Promise<Student[]> {
-  const data = await http.get<unknown>(`/student/list-by-class/${classId}`)
+  const data = await http.get<unknown>('/students', { classId })
   return normalizeList<Student>(data)
 }
 
 /**
  * 分页查询课程
- * 后端 GET /api/course/page?pageNo&pageSize&keyword&type&teachingGroupId
+ * 后端 GET /api/courses?pageNo&pageSize&keyword&type&teachingGroupId
  */
 export function pageCourses(
   query: PageQuery & { keyword?: string; type?: string; teachingGroupId?: number },
 ): Promise<PageResult<Course>> {
-  return getPage<Course>('/course/page', pageParams(query))
+  return getPage<Course>('/courses', pageParams(query))
 }
 
 /**
- * 教师：我的班级（用于考勤录入选班级）
- * ⚠️ 缺口：后端没有"教师任教班级"接口（也没有任课关系表），
- * 当前由 Mock 提供 GET /api/teacher/my-classes?teacherId，待后端补。
+ * 教师：任教的班级（用于考勤点名选班级）
+ * 后端 GET /api/teachers/{id}/classes
  */
 export async function listMyClasses(teacherId: number): Promise<ClassInfo[]> {
-  const data = await http.get<unknown>('/teacher/my-classes', { teacherId })
+  const data = await http.get<unknown>(`/teachers/${teacherId}/classes`)
   return normalizeList<ClassInfo>(data)
 }
 
 /**
- * 教师：我的任教课程（用于教学日志、考核方式申报选课程）
- * ⚠️ 缺口：同上，后端无接口，当前由 Mock 提供 GET /api/teacher/my-courses?teacherId，待后端补。
+ * 教师：任教的课程（用于教学日志、考核方式申报选课程）
+ * 后端 GET /api/teachers/{id}/courses
  */
 export async function listMyCourses(teacherId: number): Promise<Course[]> {
-  const data = await http.get<unknown>('/teacher/my-courses', { teacherId })
+  const data = await http.get<unknown>(`/teachers/${teacherId}/courses`)
   return normalizeList<Course>(data)
 }

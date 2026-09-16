@@ -29,10 +29,7 @@ export function addTeachingLog(log: TeachingLog) {
  * 教师：查询本人某周的授课日志（date 传该周任意一天）
  * 后端 GET /api/teaching-log/list-by-teacher-week?teacherId&date
  */
-export async function listMyTeachingLogs(
-  teacherId: number,
-  date: string,
-): Promise<TeachingLog[]> {
+export async function listMyTeachingLogs(teacherId: number, date: string): Promise<TeachingLog[]> {
   const data = await http.get<unknown>('/teaching-log/list-by-teacher-week', { teacherId, date })
   return normalizeList<TeachingLog>(data)
 }
@@ -41,10 +38,7 @@ export async function listMyTeachingLogs(
  * 查询某个班级某周的授课日志
  * 后端 GET /api/teaching-log/list-by-class-week?classId&date
  */
-export async function listClassTeachingLogs(
-  classId: number,
-  date: string,
-): Promise<TeachingLog[]> {
+export async function listClassTeachingLogs(classId: number, date: string): Promise<TeachingLog[]> {
   const data = await http.get<unknown>('/teaching-log/list-by-class-week', { classId, date })
   return normalizeList<TeachingLog>(data)
 }

@@ -42,13 +42,33 @@ const router = createRouter({
  */
 router.beforeEach(async (to) => {
   const userStore = useUserStore()
+
+  /**
+   * 师生端不再拥有自己的登录入口。
+   * 访问 5174/login 时统一跳到 5173/login。
+   */
+  if (
+    to.path === '/login'
+    && !userStore.token
+  ) {
+    window.location.replace(
+      'http://localhost:5173/login',
+    )
+
+    return false
+  }
+
   const requiresAuth = to.meta.requiresAuth !== false
 
-  if (requiresAuth && !userStore.token) {
-    return {
-      path: '/login',
-      query: to.fullPath !== '/' && to.fullPath !== '/home' ? { redirect: to.fullPath } : undefined,
-    }
+  if (
+    requiresAuth
+    && !userStore.token
+  ) {
+    window.location.replace(
+      'http://localhost:5173/login',
+    )
+
+    return false
   }
 
   if (requiresAuth && userStore.token) {

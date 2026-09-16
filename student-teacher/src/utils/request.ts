@@ -80,7 +80,11 @@ instance.interceptors.response.use(
       redirectToLogin()
       return Promise.reject(error)
     }
-    showToast(messageOf(error.response?.data) === '请求失败' ? '网络异常，请稍后重试' : messageOf(error.response?.data))
+    showToast(
+      messageOf(error.response?.data) === '请求失败'
+        ? '网络异常，请稍后重试'
+        : messageOf(error.response?.data),
+    )
     return Promise.reject(error)
   },
 )

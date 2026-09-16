@@ -1,14 +1,71 @@
-/* 师生端全局样式：移动优先，页面主体居中限宽，桌面端同样可看 */
+/**
+ * 全局样式：设计令牌与 admin 端保持一致。
+ *
+ * admin 端用的是 Element Plus 的 PC 后台规范，这里把它的核心令牌搬过来，
+ * 让两端在「配色 / 字体 / 卡片 / 状态标签 / 页面结构」上观感一致（师生端仍用 Vant 组件）。
+ *
+ * 对齐来源：admin/src/styles/index.css、admin/src/components/CommonTable.vue
+ *   - 文字主色 #303133，次要文字 #909399
+ *   - 页面背景 #f5f7fa，卡片白底 + 1px #e4e7ed 边框 + 4px 圆角 + shadow=never
+ *   - 主题色 #409eff（Element Plus 默认蓝），success #67c23a / warning #e6a23c / danger #f56c6c
+ *   - 字体栈与 admin 相同
+ */
+
 :root {
-  --st-primary: #1989fa;
-  --st-bg: #f5f6f8;
-  --st-text: #323233;
-  --st-text-light: #969799;
-  --st-border: #ebedf0;
+  /* 主题色（对齐 Element Plus） */
+  --st-primary: #409eff;
+  --st-success: #67c23a;
+  --st-warning: #e6a23c;
+  --st-danger: #f56c6c;
+  --st-info: #909399;
+
+  /* 主题色的浅色底（对齐 Element Plus 的 *-light-9，用于状态卡片的背景） */
+  --st-primary-light: #ecf5ff;
+  --st-success-light: #f0f9eb;
+  --st-warning-light: #fdf6ec;
+  --st-danger-light: #fef0f0;
+  --st-info-light: #f4f4f5;
+
+  /* 文字与边框 */
+  --st-text: #303133;
+  --st-text-regular: #606266;
+  --st-text-light: #909399;
+  --st-border: #e4e7ed;
+  --st-border-light: #ebeef5;
+
+  /* 背景 */
+  --st-bg: #f5f7fa;
+
+  /* 布局 */
   --st-page-max-width: 640px;
+  --st-radius: 4px;
+  --st-card-padding: 16px;
+
+  /* —— Vant 主题变量覆盖：让 Vant 组件的蓝/绿/红/灰与 Element Plus 完全一致 —— */
+  --van-primary-color: #409eff;
+  --van-success-color: #67c23a;
+  --van-danger-color: #f56c6c;
+  --van-warning-color: #e6a23c;
+  --van-blue: #409eff;
+  --van-green: #67c23a;
+  --van-red: #f56c6c;
+  --van-orange: #e6a23c;
+  --van-text-color: #303133;
+  --van-text-color-2: #909399;
+  --van-text-color-3: #c0c4cc;
+  --van-border-color: #e4e7ed;
+  --van-background: #f5f7fa;
+  --van-background-2: #ffffff;
+  --van-nav-bar-title-text-color: #303133;
+  --van-tabbar-item-active-color: #409eff;
+  /* 顶栏高度与 admin 的 el-header（56px）对齐 */
+  --van-nav-bar-height: 56px;
+  --van-nav-bar-background: #ffffff;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -22,8 +79,9 @@ body {
   margin: 0;
   color: var(--st-text);
   background: var(--st-bg);
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-family:
+    'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑',
+    Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -46,18 +104,51 @@ a {
   padding-bottom: 16px;
 }
 
-.st-section-title {
-  margin: 16px 4px 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--st-text-light);
+/* ---------------- 卡片：对齐 admin 的 el-card（shadow=never） ---------------- */
+.st-card {
+  padding: var(--st-card-padding);
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius);
 }
 
-.st-card {
-  padding: 12px;
-  margin-bottom: 10px;
-  background: #fff;
-  border-radius: 10px;
+/* 卡片标题区：对齐 admin CommonTable 的 ct__header（标题 + 右侧操作） */
+.st-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.st-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--st-text);
+}
+
+.st-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------------- 筛选区：对齐 admin 的 ct__search ---------------- */
+.st-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* ---------------- 区块标题 / 行 / 说明 ---------------- */
+.st-section-title {
+  margin: 16px 2px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--st-text);
 }
 
 .st-row {
@@ -74,4 +165,11 @@ a {
 
 .st-empty {
   padding: 32px 0;
+}
+
+/* 分页：对齐 admin 的右对齐 + margin-top 16px */
+.st-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }

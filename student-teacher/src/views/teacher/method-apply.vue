@@ -4,6 +4,8 @@
  * 列表：GET  /api/exam-apply/my/list?teacherId（后端缺口接口，现由 Mock 提供）
  * 提交：POST /api/exam-apply/apply（同课程已有待审核申报时会失败）
  * 审核在后台管理端完成，本页只负责提交与查看状态。
+ *
+ * 结构：顶部卡片头（PageHeader + 主操作）+ PageState 三态。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
@@ -13,6 +15,9 @@ import { listMyCourses } from '@/api/base'
 import type { Course } from '@/api/base'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, EXAM_METHOD_OPTIONS } from '@/constants/dict'
 import { formatDateTime } from '@/utils/format'
 
@@ -20,7 +25,12 @@ const userStore = useUserStore()
 /** 教师工号；0 = 业务身份未解析成功 */
 const teacherId = computed(() => userStore.businessId)
 
-const { data: applies, loading, error, reload } = useAsyncData<ExamApply[]>(
+const {
+  data: applies,
+  loading,
+  error,
+  reload,
+} = useAsyncData<ExamApply[]>(
   () => (teacherId.value ? listMyExamApplies(teacherId.value) : Promise.resolve([])),
   [],
 )
@@ -36,8 +46,12 @@ const showCoursePicker = ref(false)
 const submitting = ref(false)
 const form = reactive({ courseId: 0, applyType: EXAM_METHOD_OPTIONS[0] as string, reason: '' })
 
-const courseText = computed(() => courses.value.find((item) => item.id === form.courseId)?.name ?? '')
-const courseColumns = computed(() => courses.value.map((item) => ({ text: item.name, value: item.id })))
+const courseText = computed(
+  () => courses.value.find((item) => item.id === form.courseId)?.name ?? '',
+)
+const courseColumns = computed(() =>
+  courses.value.map((item) => ({ text: item.name, value: item.id })),
+)
 
 function openForm() {
   form.courseId = courses.value[0]?.id ?? 0
@@ -54,7 +68,9 @@ function openCoursePicker() {
   showCoursePicker.value = true
 }
 
-function onCourseConfirm(payload: { selectedOptions?: Array<{ value?: string | number } | undefined> }) {
+function onCourseConfirm(payload: {
+  selectedOptions?: Array<{ value?: string | number } | undefined>
+}) {
   form.courseId = Number(payload.selectedOptions?.[0]?.value ?? 0)
   showCoursePicker.value = false
 }
@@ -97,6 +113,13 @@ async function retryProfile() {
   reloadCourses()
 }
 
+/** 统计条数据（对齐公共组件 StatBar）：全部由本人申报列表派生，不新增接口 */
+const summaryItems = computed(() => [
+  { label: '申报总数', value: applies.value.length },
+  { label: '待审核', value: applies.value.filter((item) => item.status === 'WAIT').length },
+  { label: '已通过', value: applies.value.filter((item) => item.status === 'PASS').length },
+])
+
 onMounted(() => {
   reload()
   reloadCourses()
@@ -110,22 +133,30 @@ onMounted(() => {
     </van-empty>
 
     <template v-else>
-      <van-button class="apply__add" type="primary" round block icon="plus" @click="openForm">
-        新增考核方式申报
-      </van-button>
-
-      <div v-if="loading" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
+      <!-- 顶部：标题 + 主操作（对齐 admin 的卡片头结构） -->
+      <div class="st-card">
+        <PageHeader title="考核方式申报">
+          <template #actions>
+            <van-button size="small" type="primary" icon="plus" @click="openForm">
+              新增申报
+            </van-button>
+          </template>
+        </PageHeader>
+        <StatBar :items="summaryItems" />
       </div>
 
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="applies.length === 0" description="还没有考核方式申报记录" />
-
-      <template v-else>
-        <div v-for="item in applies" :key="item.id ?? `${item.courseId}-${item.createTime}`" class="st-card">
+      <PageState
+        :loading="loading"
+        :error="error"
+        :empty="applies.length === 0"
+        empty-text="还没有考核方式申报记录"
+        @retry="reload"
+      >
+        <div
+          v-for="item in applies"
+          :key="item.id ?? `${item.courseId}-${item.createTime}`"
+          class="st-card"
+        >
           <div class="st-row">
             <span class="apply__course">{{ item.courseName || `课程#${item.courseId}` }}</span>
             <van-tag :type="AUDIT_STATUS_TYPE[item.status ?? ''] || 'primary'">
@@ -139,10 +170,11 @@ onMounted(() => {
           <div v-if="item.reason" class="apply__reason">{{ item.reason }}</div>
           <div class="st-muted apply__time">提交时间：{{ formatDateTime(item.createTime) }}</div>
         </div>
-      </template>
+      </PageState>
 
       <div class="st-card st-muted apply__note">
-        申报提交后由教研室 → 系主任 → 教务处逐级审核（审核在后台管理端完成），审核结果会同步到本页状态。
+        申报提交后由教研室 → 系主任 →
+        教务处逐级审核（审核在后台管理端完成），审核结果会同步到本页状态。
       </div>
     </template>
 
@@ -151,22 +183,46 @@ onMounted(() => {
       <div class="apply__form-title">新增考核方式申报</div>
       <van-form class="apply__form" @submit="onSubmit">
         <van-cell-group inset>
-          <van-field readonly is-link name="course" label="课程" placeholder="请选择课程"
-            :model-value="courseText" :rules="[{ required: true, message: '请选择课程' }]"
-            @click="openCoursePicker" />
-          <van-field name="applyType" label="考核方式" :model-value="form.applyType"
-            :rules="[{ required: true, message: '请选择考核方式' }]">
+          <van-field
+            readonly
+            is-link
+            name="course"
+            label="课程"
+            placeholder="请选择课程"
+            :model-value="courseText"
+            :rules="[{ required: true, message: '请选择课程' }]"
+            @click="openCoursePicker"
+          />
+          <van-field
+            name="applyType"
+            label="考核方式"
+            :model-value="form.applyType"
+            :rules="[{ required: true, message: '请选择考核方式' }]"
+          >
             <template #input>
               <van-radio-group v-model="form.applyType" direction="horizontal">
-                <van-radio v-for="method in EXAM_METHOD_OPTIONS" :key="method" :name="method" shape="dot">
+                <van-radio
+                  v-for="method in EXAM_METHOD_OPTIONS"
+                  :key="method"
+                  :name="method"
+                  shape="dot"
+                >
                   {{ method }}
                 </van-radio>
               </van-radio-group>
             </template>
           </van-field>
-          <van-field v-model="form.reason" name="reason" label="申请理由" type="textarea" rows="3"
-            autosize maxlength="300" placeholder="请说明本课程采用该考核方式的理由"
-            :rules="[{ required: true, message: '请填写申请理由' }]" />
+          <van-field
+            v-model="form.reason"
+            name="reason"
+            label="申请理由"
+            type="textarea"
+            rows="3"
+            autosize
+            maxlength="300"
+            placeholder="请说明本课程采用该考核方式的理由"
+            :rules="[{ required: true, message: '请填写申请理由' }]"
+          />
         </van-cell-group>
         <div class="apply__submit">
           <van-button round block type="primary" native-type="submit" :loading="submitting">
@@ -180,20 +236,49 @@ onMounted(() => {
     </van-popup>
 
     <van-popup v-model:show="showCoursePicker" position="bottom" round>
-      <van-picker title="选择课程" :columns="courseColumns" :model-value="[form.courseId]"
-        @confirm="onCourseConfirm" @cancel="showCoursePicker = false" />
+      <van-picker
+        title="选择课程"
+        :columns="courseColumns"
+        :model-value="[form.courseId]"
+        @confirm="onCourseConfirm"
+        @cancel="showCoursePicker = false"
+      />
     </van-popup>
   </div>
 </template>
 
 <style scoped>
-.apply__add { margin-bottom: 10px; }
-.apply__course { font-size: 15px; font-weight: 600; }
-.apply__type { justify-content: flex-start; gap: 8px; margin-top: 8px; }
-.apply__reason { margin-top: 8px; font-size: 13px; line-height: 1.6; }
-.apply__time { margin-top: 8px; }
-.apply__note { line-height: 1.6; }
-.apply__form-title { padding: 14px 0; font-size: 15px; font-weight: 600; text-align: center; }
-.apply__submit { margin: 16px; }
-.apply__tip { margin: 0 16px 16px; text-align: center; }
+.apply__course {
+  font-size: 15px;
+  font-weight: 600;
+}
+.apply__type {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.apply__reason {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.apply__time {
+  margin-top: 8px;
+}
+.apply__note {
+  line-height: 1.6;
+}
+.apply__form-title {
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+.apply__submit {
+  margin: 16px;
+}
+.apply__tip {
+  margin: 0 16px 16px;
+  text-align: center;
+}
 </style>

@@ -18,11 +18,11 @@ export interface ExamInfo {
 }
 
 /**
- * 分页查询考试（教师录成绩时选择考试用）
- * 后端 GET /api/exam/page?pageNo&pageSize&name&termId&examType
+ * 分页查询考试（学生端「考试信息」列表 / 教师录入成绩时选择考试）
+ * 后端 GET /api/exams?pageNo&pageSize&name&termId&examType
  */
 export function pageExams(
   query: PageQuery & { name?: string; termId?: number; examType?: string },
 ): Promise<PageResult<ExamInfo>> {
-  return getPage<ExamInfo>('/exam/page', pageParams(query))
+  return getPage<ExamInfo>('/exams', pageParams(query))
 }

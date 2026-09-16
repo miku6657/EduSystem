@@ -3,13 +3,17 @@
  * 学生 · 我的考勤
  * 数据源：GET /api/student-attendance/list-by-student?studentId&startDate&endDate
  *
- * 结构与 scores.vue 保持一致：useAsyncData + 显式 import + Vant 组件 + 下拉刷新 + 空/错误状态。
+ * 结构与 scores.vue 保持一致：顶部卡片头（PageHeader + StatBar）+ useAsyncData +
+ * 显式 import + Vant 组件 + 下拉刷新 + PageState 三态。
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { listMyAttendance } from '@/api/attendance'
 import type { StudentAttendanceRecord } from '@/api/attendance'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
+import PageHeader from '@/components/PageHeader.vue'
+import PageState from '@/components/PageState.vue'
+import StatBar from '@/components/StatBar.vue'
 import { addDays, currentWeekRange, todayStr } from '@/utils/format'
 import { ATTENDANCE_STATUS_TYPE } from '@/constants/dict'
 
@@ -30,7 +34,12 @@ const dateRange = computed(() => {
   return { start: addDays(end, rangeKey.value === 'biweek' ? -13 : -29), end }
 })
 
-const { data: records, loading, error, reload } = useAsyncData<StudentAttendanceRecord[]>(
+const {
+  data: records,
+  loading,
+  error,
+  reload,
+} = useAsyncData<StudentAttendanceRecord[]>(
   () =>
     userStore.businessId
       ? listMyAttendance(userStore.businessId, dateRange.value.start, dateRange.value.end)
@@ -57,6 +66,15 @@ const summary = computed(() => {
 /** 出勤率文案：无记录显示 — */
 const rateText = computed(() => (summary.value.rate === null ? '—' : `${summary.value.rate}%`))
 
+/** 统计条数据（对齐公共组件 StatBar） */
+const summaryItems = computed(() => [
+  { label: '出勤率', value: rateText.value },
+  { label: '正常', value: summary.value.normal },
+  { label: '迟到', value: summary.value.late },
+  { label: '缺勤', value: summary.value.absent },
+  { label: '请假', value: summary.value.leave },
+])
+
 /** 切换快捷区间后按新日期重新查询 */
 watch(rangeKey, () => {
   void reload()
@@ -76,29 +94,12 @@ onMounted(reload)
 
 <template>
   <div>
-    <!-- 概览：出勤率 + 四项计数（前端 computed） -->
-    <div class="st-card attendance__summary">
-      <div class="attendance__rate">
-        <div class="attendance__rate-value">{{ rateText }}</div>
-        <div class="st-muted">出勤率（正常 + 迟到）/ 共 {{ summary.total }} 条</div>
-      </div>
-      <div class="attendance__counts">
-        <div class="attendance__count">
-          <div class="attendance__count-value">{{ summary.normal }}</div>
-          <div class="st-muted">正常</div>
-        </div>
-        <div class="attendance__count">
-          <div class="attendance__count-value">{{ summary.late }}</div>
-          <div class="st-muted">迟到</div>
-        </div>
-        <div class="attendance__count">
-          <div class="attendance__count-value">{{ summary.absent }}</div>
-          <div class="st-muted">缺勤</div>
-        </div>
-        <div class="attendance__count">
-          <div class="attendance__count-value">{{ summary.leave }}</div>
-          <div class="st-muted">请假</div>
-        </div>
+    <!-- 顶部：标题 + 概览（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
+      <PageHeader title="我的考勤" />
+      <StatBar :items="summaryItems" />
+      <div class="attendance__hint st-muted">
+        出勤率 =（正常 + 迟到）/ 共 {{ summary.total }} 条
       </div>
     </div>
 
@@ -108,23 +109,21 @@ onMounted(reload)
       <van-tab title="近30天" name="month" />
     </van-tabs>
 
-    <div class="attendance__range st-muted">统计区间：{{ dateRange.start }} ~ {{ dateRange.end }}</div>
+    <div class="attendance__range st-muted">
+      统计区间：{{ dateRange.start }} ~ {{ dateRange.end }}
+    </div>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <!-- 未解析到学号：明确提示，不发请求 -->
-      <van-empty v-if="!userStore.businessId" description="未解析到学号，请确认登录账号为学号" />
-
-      <div v-else-if="loading && !refreshing" class="st-empty">
-        <van-loading vertical>加载中…</van-loading>
-      </div>
-
-      <van-empty v-else-if="error" image="error" :description="error">
-        <van-button round type="primary" size="small" @click="reload">重新加载</van-button>
-      </van-empty>
-
-      <van-empty v-else-if="records.length === 0" description="该时间段内暂无考勤记录" />
-
-      <template v-else>
+      <!-- 未解析到学号时优先提示、不发请求，因此不进入加载态 -->
+      <PageState
+        :loading="loading && !refreshing && !!userStore.businessId"
+        :error="error"
+        :empty="!userStore.businessId || records.length === 0"
+        :empty-text="
+          userStore.businessId ? '该时间段内暂无考勤记录' : '未解析到学号，请确认登录账号为学号'
+        "
+        @retry="reload"
+      >
         <div
           v-for="row in records"
           :key="row.id ?? `${row.attendanceDate}-${row.courseId}`"
@@ -138,41 +137,15 @@ onMounted(reload)
           </div>
           <div class="attendance__meta st-muted">{{ row.attendanceDate || '—' }}</div>
         </div>
-      </template>
+      </PageState>
     </van-pull-refresh>
   </div>
 </template>
 
 <style scoped>
-.attendance__summary {
-  padding: 14px 12px;
-}
-
-.attendance__rate {
-  padding-bottom: 10px;
-  text-align: center;
-  border-bottom: 1px solid var(--st-border);
-}
-
-.attendance__rate-value {
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--st-primary);
-}
-
-.attendance__counts {
-  display: flex;
-  padding-top: 10px;
-  text-align: center;
-}
-
-.attendance__count {
-  flex: 1;
-}
-
-.attendance__count-value {
-  font-size: 18px;
-  font-weight: 600;
+.attendance__hint {
+  margin-top: 6px;
+  font-size: 12px;
 }
 
 .attendance__range {

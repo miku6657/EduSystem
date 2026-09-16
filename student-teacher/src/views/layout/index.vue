@@ -31,12 +31,7 @@ function onTabChange(path: string) {
       <router-view />
     </div>
 
-    <van-tabbar
-      :model-value="activePath"
-      fixed
-      active-color="#1989fa"
-      @change="onTabChange"
-    >
+    <van-tabbar :model-value="activePath" fixed active-color="#409eff" @change="onTabChange">
       <van-tabbar-item
         v-for="item in tabs"
         :key="item.path"
@@ -52,5 +47,10 @@ function onTabChange(path: string) {
 <style scoped>
 .layout {
   min-height: 100%;
+}
+
+/* 顶栏底部细线，与 admin 的 el-header（白底 + 1px #e4e7ed 下边框）一致 */
+.layout :deep(.van-nav-bar) {
+  border-bottom: 1px solid var(--st-border);
 }
 </style>
