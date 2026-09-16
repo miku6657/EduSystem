@@ -15,7 +15,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
-
 @RestController
 @RequestMapping("/api/auth/cas")
 @RequiredArgsConstructor
@@ -28,7 +27,6 @@ public class CasAuthController {
     private final UserService userService;
 
     private final JWTUtil jwtUtil;
-
 
     /**
      * 发起CAS登录
@@ -52,12 +50,10 @@ public class CasAuthController {
                         .encode()
                         .toUriString();
 
-
         response.sendRedirect(
                 redirectUrl
         );
     }
-
 
     /**
      * CAS登录回调
@@ -74,7 +70,6 @@ public class CasAuthController {
         String username =
                 casService.validateTicket(ticket);
 
-
         if (username == null) {
 
             response.sendRedirect(
@@ -85,7 +80,6 @@ public class CasAuthController {
             return;
         }
 
-
         /**
          * 2. 查询业务系统用户
          */
@@ -93,7 +87,6 @@ public class CasAuthController {
                 userService.findByUsername(
                         username
                 );
-
 
         if (user == null) {
 
@@ -105,6 +98,16 @@ public class CasAuthController {
             return;
         }
 
+        /**
+         * 打印当前CAS用户和角色，
+         * 方便测试角色分流。
+         */
+        System.out.println(
+                "CAS username = "
+                        + user.getUsername()
+                        + ", role = "
+                        + user.getRole()
+        );
 
         /**
          * 3. 生成业务系统JWT
@@ -115,14 +118,77 @@ public class CasAuthController {
                         user.getRole()
                 );
 
+        /**
+         * 4. 根据角色决定进入哪个前端
+         */
+        String role =
+                user.getRole();
+
+        String frontendRedirectUrl;
 
         /**
-         * 4. 跳回Vue
+         * 管理员进入管理端
+         */
+        if (
+                "ADMIN".equalsIgnoreCase(
+                        role
+                )
+        ) {
+
+            frontendRedirectUrl =
+                    "http://localhost:5173/cas/callback";
+
+        }
+
+        /**
+         * 学生、教师进入师生端
+         */
+        else if (
+                "STUDENT".equalsIgnoreCase(
+                        role
+                )
+                        || "TEACHER".equalsIgnoreCase(
+                        role
+                )
+        ) {
+
+            frontendRedirectUrl =
+                    "http://localhost:5174/cas/callback";
+
+        }
+
+        /**
+         * 未知角色
+         */
+        else {
+
+            String errorUrl =
+                    UriComponentsBuilder
+                            .fromHttpUrl(
+                                    "http://localhost:5173/cas/callback"
+                            )
+                            .queryParam(
+                                    "error",
+                                    "未知用户角色：" + role
+                            )
+                            .build()
+                            .encode()
+                            .toUriString();
+
+            response.sendRedirect(
+                    errorUrl
+            );
+
+            return;
+        }
+
+        /**
+         * 5. 携带JWT跳转到对应前端
          */
         String frontendUrl =
                 UriComponentsBuilder
                         .fromHttpUrl(
-                                casProperties.getFrontendRedirectUrl()
+                                frontendRedirectUrl
                         )
                         .queryParam(
                                 "token",
@@ -131,7 +197,6 @@ public class CasAuthController {
                         .build()
                         .encode()
                         .toUriString();
-
 
         response.sendRedirect(
                 frontendUrl
