@@ -1,3 +1,5 @@
+import type { TableColumnCtx } from 'element-plus'
+
 /** 可渲染的表单项类型（搜索栏 / 弹窗表单通用） */
 export type FieldType = 'input' | 'select' | 'date-picker' | 'number' | 'textarea'
 
@@ -44,4 +46,5 @@ export interface TableColumn {
   align?: 'left' | 'center' | 'right'
   fixed?: boolean | 'left' | 'right'
   showOverflowTooltip?: boolean
+  formatter?: (row: Record<string, unknown>, column: TableColumnCtx<Record<string, unknown>>, cellValue: unknown, index: number) => string
 }

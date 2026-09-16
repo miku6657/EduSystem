@@ -1,82 +1,60 @@
 import { http } from '@/utils/request'
 
-
 export interface Term {
-
-  id:number
-
-  name:string
-
-  startDate:string
-
-  endDate:string
-
-  status?:number
-
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  status?: number
 }
 
+export function getTermList() {
+  return http.get<Term[]>('/terms')
+}
 
-/**
- * 查询全部学期
- */
-export function getTermList(){
+export async function getCurrentTerm() {
+  const terms = await getTermList()
 
-  return http.get<Term[]>(
-    '/terms'
+  if (!terms || terms.length === 0) {
+    return null
+  }
+
+  const activeTerm = terms.find(
+    (term) => Number(term.status) === 1,
   )
 
+  if (activeTerm) {
+    return activeTerm
+  }
+
+  const today = new Date()
+
+  const dateTerm = terms.find((term) => {
+    const start = new Date(`${term.startDate}T00:00:00`)
+    const end = new Date(`${term.endDate}T23:59:59`)
+
+    return today >= start && today <= end
+  })
+
+  if (dateTerm) {
+    return dateTerm
+  }
+
+  return [...terms].sort(
+    (a, b) =>
+      new Date(b.startDate).getTime()
+      - new Date(a.startDate).getTime(),
+  )[0]
 }
 
-
-/**
- * 当前学期
- */
-export function getCurrentTerm(){
-
-  return getTermList().then((terms) => terms.find((term) => term.status === 1) ?? terms[0])
-
+export function addTerm(data: Term) {
+  return http.post('/terms', data)
 }
 
-
-/**
- * 新增学期
- */
-export function addTerm(
-    data:Term
-){
-
-  return http.post(
-    '/terms',
-    data
-  )
-
+export function updateTerm(data: Term) {
+  return http.put(`/terms/${data.id}`, data)
 }
 
-
-/**
- * 修改学期
- */
-export function updateTerm(
-    data:Term
-){
-
-  return http.put(
-    `/terms/${data.id}`,
-    data
-  )
-
-}
-
-
-/**
- * 删除学期
- */
-export function deleteTerm(
-    id:number
-){
-
-  return http.delete(
-    `/terms/${id}`
-  )
-
+export function deleteTerm(id: string) {
+  return http.delete(`/terms/${id}`)
 }

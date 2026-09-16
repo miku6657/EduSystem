@@ -3,238 +3,467 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshLeft, Search } from '@element-plus/icons-vue'
 import {
-  approveGraduation,
-  getGraduationList,
-  rejectGraduation,
-  type GraduationAuditStatus,
-  type GraduationStudent,
+  auditGraduation,
+  buildGraduationAuditRows,
+  getGraduateChecks,
+  getGraduationStudents,
+  type GraduationAuditRow,
 } from '@/api/graduation'
 
-const STATUS_OPTIONS: { label: string; value: '' | GraduationAuditStatus }[] = [
-  { label: '全部', value: '' },
-  { label: '待审核', value: '待审核' },
-  { label: '通过', value: '通过' },
-  { label: '未通过', value: '未通过' },
+type CheckStatus = '' | 'WAIT' | 'PASS' | 'FAIL'
+
+const STATUS_OPTIONS: {
+  label: string
+  value: CheckStatus
+}[] = [
+  {
+    label: '全部',
+    value: '',
+  },
+  {
+    label: '未审核',
+    value: 'WAIT',
+  },
+  {
+    label: '通过',
+    value: 'PASS',
+  },
+  {
+    label: '不通过',
+    value: 'FAIL',
+  },
 ]
 
-const STATUS_META: Record<GraduationAuditStatus, { text: string; type: 'warning' | 'success' | 'danger' }> = {
-  待审核: { text: '待审核', type: 'warning' },
-  通过: { text: '通过', type: 'success' },
-  未通过: { text: '未通过', type: 'danger' },
+const STATUS_META = {
+  WAIT: {
+    text: '未审核',
+    type: 'warning' as const,
+  },
+  PASS: {
+    text: '通过',
+    type: 'success' as const,
+  },
+  FAIL: {
+    text: '不通过',
+    type: 'danger' as const,
+  },
 }
 
-/** 查询条件 */
-const query = reactive({ graduateYear: '2026', name: '', studentNo: '', status: '' as '' | GraduationAuditStatus })
+const query = reactive({
+  keyword: '',
+  checkStatus: '' as CheckStatus,
+})
 
-/** 列表状态 */
 const loading = ref(false)
-const rows = ref<GraduationStudent[]>([])
-const selectedRows = ref<GraduationStudent[]>([])
-const auditingId = ref(0)
-const batchAuditing = ref(false)
 
-const pendingSelected = computed(() => selectedRows.value.filter((row) => row.status === '待审核'))
+const rows = ref<GraduationAuditRow[]>([])
 
-/** 加载列表（查询/重置共用） */
+const auditingStudentId = ref('')
+
+const filteredRows = computed(() => {
+  if (!query.checkStatus) {
+    return rows.value
+  }
+
+  return rows.value.filter(
+    (row) =>
+      row.checkStatus === query.checkStatus,
+  )
+})
+
+const totalCount = computed(
+  () => rows.value.length,
+)
+
+const waitCount = computed(
+  () =>
+    rows.value.filter(
+      (row) => row.checkStatus === 'WAIT',
+    ).length,
+)
+
+const passCount = computed(
+  () =>
+    rows.value.filter(
+      (row) => row.checkStatus === 'PASS',
+    ).length,
+)
+
+const failCount = computed(
+  () =>
+    rows.value.filter(
+      (row) => row.checkStatus === 'FAIL',
+    ).length,
+)
+
 async function loadData() {
   loading.value = true
+
   try {
-    rows.value = await getGraduationList({
-      graduateYear: query.graduateYear.trim(),
-      name: query.name.trim() || undefined,
-      studentNo: query.studentNo.trim() || undefined,
-      status: query.status || undefined,
-    })
+    const [
+      studentPage,
+      checks,
+    ] = await Promise.all([
+      getGraduationStudents({
+        pageNo: 1,
+        pageSize: 1000,
+        keyword:
+          query.keyword.trim()
+          || undefined,
+      }),
+
+      getGraduateChecks(),
+    ])
+
+    rows.value =
+      buildGraduationAuditRows(
+        studentPage.records,
+        checks,
+      )
   } catch {
-    // 错误提示已由请求层统一处理
+    // 错误由 request.ts 统一提示
   } finally {
     loading.value = false
   }
 }
 
-function onQuery() {
+function handleQuery() {
   loadData()
 }
 
-function onReset() {
-  query.graduateYear = '2026'
-  query.name = ''
-  query.studentNo = ''
-  query.status = ''
+function handleReset() {
+  query.keyword = ''
+  query.checkStatus = ''
+
   loadData()
 }
 
-function onSelectionChange(selection: GraduationStudent[]) {
-  selectedRows.value = selection
-}
-
-function statusMeta(status: GraduationAuditStatus) {
+function getStatusMeta(
+  status: 'WAIT' | 'PASS' | 'FAIL',
+) {
   return STATUS_META[status]
 }
 
-/** 单条通过 / 驳回（el-table 插槽 row 为泛型，参数做 any 收窄） */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function auditRow(row: any, action: 'approve' | 'reject') {
-  const actionText = action === 'approve' ? '通过' : '驳回'
-  const title = `${actionText}毕业审核`
+async function handleAudit(
+  row: GraduationAuditRow,
+) {
   try {
     await ElMessageBox.confirm(
-      `确定${actionText} ${row.name}（学号 ${row.studentNo}）的毕业审核吗？${action === 'reject' ? '驳回后学生需补充材料后重新提交。' : ''}`,
-      title,
-      { confirmButtonText: `确认${actionText}`, cancelButtonText: '取消', type: action === 'approve' ? 'warning' : 'error' },
+      `确定审核 ${row.name}（${row.studentNo}）吗？系统将自动检查该学生全部已录入成绩，存在低于60分的成绩则不通过，否则通过。`,
+      '毕业资格审核',
+      {
+        confirmButtonText: '开始审核',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
     )
   } catch {
     return
   }
-  auditingId.value = row.id
-  try {
-    if (action === 'approve') {
-      await approveGraduation(row.id)
-      ElMessage.success(`已通过 ${row.name} 的毕业审核`)
-    } else {
-      await rejectGraduation(row.id)
-      ElMessage.warning(`已驳回 ${row.name} 的毕业审核`)
-    }
-    await loadData()
-  } catch {
-    // 错误提示已由请求层统一处理
-  } finally {
-    auditingId.value = 0
-  }
-}
 
-/** 批量通过（仅对待审核行生效，跳过非待审核行） */
-async function batchApprove() {
-  const targets = pendingSelected.value
-  if (targets.length === 0) {
-    ElMessage.warning('请先勾选处于“待审核”状态的记录')
-    return
-  }
+  auditingStudentId.value =
+    row.studentId
+
   try {
-    await ElMessageBox.confirm(
-      `确定批量通过选中的 ${targets.length} 条毕业审核记录吗？`,
-      '批量通过',
-      { confirmButtonText: '确认批量通过', cancelButtonText: '取消', type: 'warning' },
+    await auditGraduation(
+      row.studentId,
+      'admin',
     )
-  } catch {
-    return
-  }
-  batchAuditing.value = true
-  try {
-    await Promise.all(targets.map((row) => approveGraduation(row.id)))
-    ElMessage.success(`已批量通过 ${targets.length} 条记录`)
-    selectedRows.value = []
+
+    ElMessage.success(
+      `${row.name} 的毕业资格审核完成`,
+    )
+
     await loadData()
   } catch {
-    // 单条失败时由请求层提示，列表保持原状供重试
+    // 错误由 request.ts 统一提示
   } finally {
-    batchAuditing.value = false
+    auditingStudentId.value = ''
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>
   <div class="graduation-page">
-    <!-- 搜索栏 -->
-    <el-card shadow="never" class="filter-card">
-      <el-form inline class="filter-form" @submit.prevent="onQuery">
-        <el-form-item label="毕业年份">
-          <el-input v-model="query.graduateYear" placeholder="请输入毕业年份" style="width: 130px" @keyup.enter="onQuery" />
-        </el-form-item>
-        <el-form-item label="姓名">
+    <el-card
+      shadow="never"
+      class="rule-card"
+    >
+      <el-alert
+        title="毕业资格审核规则"
+        type="info"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          系统自动查询学生全部已录入成绩。
+          只要存在一门成绩低于 60 分，
+          毕业审核即为“不通过”；
+          所有已录入成绩均不低于 60 分，
+          则审核“通过”。
+        </template>
+      </el-alert>
+    </el-card>
+
+    <el-row
+      :gutter="14"
+      class="stat-row"
+    >
+      <el-col :span="6">
+        <el-card
+          shadow="never"
+          class="stat-card"
+        >
+          <div class="stat-value">
+            {{ totalCount }}
+          </div>
+
+          <div class="stat-label">
+            学生总数
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="6">
+        <el-card
+          shadow="never"
+          class="stat-card"
+        >
+          <div class="stat-value warning">
+            {{ waitCount }}
+          </div>
+
+          <div class="stat-label">
+            未审核
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="6">
+        <el-card
+          shadow="never"
+          class="stat-card"
+        >
+          <div class="stat-value success">
+            {{ passCount }}
+          </div>
+
+          <div class="stat-label">
+            审核通过
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="6">
+        <el-card
+          shadow="never"
+          class="stat-card"
+        >
+          <div class="stat-value danger">
+            {{ failCount }}
+          </div>
+
+          <div class="stat-label">
+            审核不通过
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card
+      shadow="never"
+      class="filter-card"
+    >
+      <el-form
+        inline
+        class="filter-form"
+        @submit.prevent="handleQuery"
+      >
+        <el-form-item label="学生">
           <el-input
-            v-model="query.name"
-            placeholder="请输入学生姓名"
+            v-model="query.keyword"
+            placeholder="姓名或学号"
             clearable
-            style="width: 170px"
-            @keyup.enter="onQuery"
+            style="width: 220px"
+            @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item label="学号">
-          <el-input
-            v-model="query.studentNo"
-            placeholder="请输入学号"
-            clearable
-            style="width: 170px"
-            @keyup.enter="onQuery"
-          />
-        </el-form-item>
+
         <el-form-item label="审核状态">
-          <el-select v-model="query.status" placeholder="全部" style="width: 130px">
-            <el-option v-for="opt in STATUS_OPTIONS" :key="opt.value" :label="opt.label" :value="opt.value" />
+          <el-select
+            v-model="query.checkStatus"
+            style="width: 140px"
+          >
+            <el-option
+              v-for="option in STATUS_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
+
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="onQuery">查询</el-button>
-          <el-button :icon="RefreshLeft" @click="onReset">重置</el-button>
+          <el-button
+            type="primary"
+            :icon="Search"
+            @click="handleQuery"
+          >
+            查询
+          </el-button>
+
+          <el-button
+            :icon="RefreshLeft"
+            @click="handleReset"
+          >
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <!-- 列表 -->
     <el-card shadow="never">
       <template #header>
-        <div class="table-head">
-          <span class="table-head__title">毕业生列表（共 {{ rows.length }} 条）</span>
-          <el-button
-            type="success"
-            plain
-            :disabled="pendingSelected.length === 0"
-            :loading="batchAuditing"
-            @click="batchApprove"
-          >
-            批量通过{{ pendingSelected.length ? `（${pendingSelected.length}）` : '' }}
-          </el-button>
+        <div class="table-header">
+          <span class="table-title">
+            毕业资格审核
+          </span>
+
+          <span class="table-count">
+            当前显示
+            {{ filteredRows.length }}
+            条
+          </span>
         </div>
       </template>
 
       <el-table
         v-loading="loading"
-        :data="rows"
+        :data="filteredRows"
+        row-key="studentId"
         stripe
-        row-key="id"
         style="width: 100%"
-        @selection-change="onSelectionChange"
       >
-        <el-table-column type="selection" width="48" :reserve-selection="false" />
-        <el-table-column prop="studentNo" label="学号" width="130" />
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="major" label="专业" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="graduateYear" label="毕业年份" width="110" align="center" />
-        <el-table-column label="审核状态" width="110" align="center">
+        <el-table-column
+          type="index"
+          label="#"
+          width="60"
+          align="center"
+        />
+
+        <el-table-column
+          prop="studentNo"
+          label="学号"
+          width="160"
+        />
+
+        <el-table-column
+          prop="name"
+          label="姓名"
+          width="140"
+        />
+
+        <el-table-column
+          label="审核结果"
+          width="130"
+          align="center"
+        >
           <template #default="{ row }">
-            <el-tag :type="statusMeta(row.status).type" effect="dark" disable-transitions>
-              {{ statusMeta(row.status).text }}
+            <el-tag
+              :type="
+                getStatusMeta(
+                  row.checkStatus,
+                ).type
+              "
+              effect="dark"
+            >
+              {{
+                getStatusMeta(
+                  row.checkStatus,
+                ).text
+              }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" align="center" fixed="right">
+
+        <el-table-column
+          prop="remark"
+          label="审核说明"
+          min-width="320"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
-            <template v-if="row.status === '待审核'">
-              <el-button
-                type="success"
-                size="small"
-                :loading="auditingId === row.id"
-                @click="auditRow(row, 'approve')"
-              >
-                通过
-              </el-button>
-              <el-button
-                type="danger"
-                size="small"
-                :loading="auditingId === row.id"
-                @click="auditRow(row, 'reject')"
-              >
-                驳回
-              </el-button>
-            </template>
-            <span v-else class="audited-text">已审核</span>
+            <span
+              v-if="row.remark"
+              :class="{
+                'remark-pass':
+                  row.checkStatus
+                  === 'PASS',
+                'remark-fail':
+                  row.checkStatus
+                  === 'FAIL',
+              }"
+            >
+              {{ row.remark }}
+            </span>
+
+            <span
+              v-else
+              class="empty-text"
+            >
+              尚未执行毕业审核
+            </span>
           </template>
         </el-table-column>
+
+        <el-table-column
+          prop="checker"
+          label="审核人"
+          width="120"
+          align="center"
+        >
+          <template #default="{ row }">
+            {{
+              row.checker
+              || '-'
+            }}
+          </template>
+        </el-table-column>
+
+        <el-table-column
+          label="操作"
+          width="140"
+          fixed="right"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-button
+              type="primary"
+              size="small"
+              :loading="
+                auditingStudentId
+                === row.studentId
+              "
+              @click="handleAudit(row)"
+            >
+              {{
+                row.checkStatus === 'WAIT'
+                  ? '执行审核'
+                  : '重新审核'
+              }}
+            </el-button>
+          </template>
+        </el-table-column>
+
         <template #empty>
-          <el-empty description="没有符合条件的毕业生记录" :image-size="80" />
+          <el-empty
+            description="暂无学生数据"
+            :image-size="90"
+          />
         </template>
       </el-table>
     </el-card>
@@ -248,22 +477,66 @@ onMounted(loadData)
   gap: 14px;
 }
 
+.rule-card :deep(.el-card__body) {
+  padding: 14px;
+}
+
+.stat-card {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--el-color-primary);
+}
+
+.stat-value.warning {
+  color: var(--el-color-warning);
+}
+
+.stat-value.success {
+  color: var(--el-color-success);
+}
+
+.stat-value.danger {
+  color: var(--el-color-danger);
+}
+
+.stat-label {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
 .filter-form {
   margin-bottom: -18px;
 }
 
-.table-head {
+.table-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.table-head__title {
+.table-title {
   font-weight: 600;
 }
 
-.audited-text {
-  color: var(--el-text-color-placeholder);
+.table-count {
   font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.remark-pass {
+  color: var(--el-color-success);
+}
+
+.remark-fail {
+  color: var(--el-color-danger);
+}
+
+.empty-text {
+  color: var(--el-text-color-placeholder);
 }
 </style>

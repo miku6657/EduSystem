@@ -401,6 +401,7 @@ defineExpose({ reload: loadData, search: handleSearch, reset: handleReset })
         :min-width="col.minWidth"
         :align="col.align ?? (col.type ? 'center' : 'left')"
         :fixed="col.fixed"
+        :formatter="col.formatter"
         :show-overflow-tooltip="!!col.prop && col.showOverflowTooltip !== false"
       />
       <el-table-column
