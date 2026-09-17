@@ -8,11 +8,16 @@ import {
   getArrangeTeachers,
   getFreeClassrooms,
   getExistingExams,
+  getExistingExamRooms,
+  getExistingExamMonitors,
   saveExamSchedule,
+
   type ClassroomItem,
   type CourseItem,
   type ExamArrangeItem,
   type ExistingExamItem,
+  type ExistingExamRoomItem,
+  type ExistingExamMonitorItem,
   type TeacherItem,
 } from '@/api/exam'
 import { getCurrentTerm, type Term } from '@/api/term'
@@ -42,6 +47,12 @@ const courses = ref<CourseItem[]>([])
 const classrooms = ref<ClassroomItem[]>([])
 const teachers = ref<TeacherItem[]>([])
 const existingExams = ref<ExistingExamItem[]>([])
+const existingExamRooms =
+  ref<ExistingExamRoomItem[]>([])
+
+const existingExamMonitors =
+  ref<ExistingExamMonitorItem[]>([])
+
 const rows = ref<ArrangeRow[]>([])
 
 const loadingBase = ref(false)
@@ -183,13 +194,32 @@ async function loadBaseData() {
       classroomData,
       teacherPage,
       examPage,
+      examRoomData,
+      examMonitorData,
     ] =
       await Promise.all([
         getCurrentTerm(),
+
         getArrangeCourses(),
+
         getFreeClassrooms(),
+
         getArrangeTeachers(),
+
+        /**
+         * 已有考试
+         */
         getExistingExams(),
+
+        /**
+         * 已有考试使用的教室
+         */
+        getExistingExamRooms(),
+
+        /**
+         * 已有考试监考教师
+         */
+        getExistingExamMonitors(),
       ])
 
     if (!termData) {
@@ -204,6 +234,12 @@ async function loadBaseData() {
     classrooms.value = classroomData
     teachers.value = teacherPage.records
     existingExams.value = examPage.records
+
+    existingExamRooms.value =
+      examRoomData
+
+    existingExamMonitors.value =
+      examMonitorData
 
     rows.value = []
     generatedAt.value = ''
@@ -221,6 +257,128 @@ async function loadBaseData() {
   } finally {
     loadingBase.value = false
   }
+}
+
+/**
+ * 两个时间段是否重叠。
+ *
+ * A开始 < B结束
+ * &&
+ * A结束 > B开始
+ */
+function timeOverlap(
+  start1: string,
+  end1: string,
+  start2: string,
+  end2: string,
+) {
+
+  return (
+    start1 < end2
+    &&
+    end1 > start2
+  )
+}
+
+/**
+ * 查询数据库已有考试中，
+ * 与目标日期、时间冲突的考试。
+ */
+function getOverlappedExistingExams(
+  examDate: string,
+  startTime: string,
+  endTime: string,
+) {
+
+  return existingExams.value.filter(
+    exam =>
+      exam.examDate === examDate
+      &&
+      timeOverlap(
+        exam.startTime,
+        exam.endTime,
+        startTime,
+        endTime,
+      ),
+  )
+}
+
+/**
+ * 教室是否已经被数据库中的考试占用。
+ */
+function isExistingRoomBusy(
+  classroomId: string,
+  examDate: string,
+  startTime: string,
+  endTime: string,
+) {
+
+  const overlapIds =
+    new Set(
+      getOverlappedExistingExams(
+        examDate,
+        startTime,
+        endTime,
+      ).map(
+        exam =>
+          String(exam.id),
+      ),
+    )
+
+  return existingExamRooms.value.some(
+    room =>
+      overlapIds.has(
+        String(room.examId),
+      )
+      &&
+      String(
+        room.classroomId,
+      )
+      ===
+      String(
+        classroomId,
+      ),
+  )
+}
+
+/**
+ * 教师是否已经在数据库已有考试中监考。
+ */
+function isExistingTeacherBusy(
+  teacherId: string,
+  examDate: string,
+  startTime: string,
+  endTime: string,
+) {
+
+  const overlapIds =
+    new Set(
+      getOverlappedExistingExams(
+        examDate,
+        startTime,
+        endTime,
+      ).map(
+        exam =>
+          String(exam.id),
+      ),
+    )
+
+  return existingExamMonitors.value.some(
+    monitor =>
+      overlapIds.has(
+        String(
+          monitor.examId,
+        ),
+      )
+      &&
+      String(
+        monitor.teacherId,
+      )
+      ===
+      String(
+        teacherId,
+      ),
+  )
 }
 
 async function handleArrange() {
@@ -241,77 +399,293 @@ async function handleArrange() {
   }
 
   if (classrooms.value.length === 0) {
-    ElMessage.warning('当前没有空闲教室，无法排考')
+    ElMessage.error('系统没有可用教室，无法排考')
     return
   }
 
   if (teachers.value.length === 0) {
-    ElMessage.warning('当前没有教师数据，无法排考')
+    ElMessage.error('系统没有教师数据，无法安排监考')
     return
   }
 
   arranging.value = true
 
   try {
-    const shuffledClassrooms = shuffle(classrooms.value)
-    const shuffledTeachers = shuffle(teachers.value)
-    const shuffledTimeSlots = shuffle(TIME_SLOTS)
-
-    const simultaneousCount = Math.min(
-      shuffledClassrooms.length,
-      shuffledTeachers.length,
-    )
-
-    const startDate = getExamBaseDate(currentTerm.value)
-
-    rows.value = pendingCourses.value.map((course, index) => {
-      const slotIndex = Math.floor(index / simultaneousCount)
-      const position = index % simultaneousCount
-
-      const dayOffset = Math.floor(
-        slotIndex / shuffledTimeSlots.length,
+    /**
+     * 从今天开始向后寻找可用考试时间。
+     *
+     * 不再限制120天，
+     * 也不因为学期结束就直接放弃。
+     */
+    const today =
+      parseDate(
+        formatDate(
+          new Date(),
+        ),
       )
 
-      const timeIndex =
-        slotIndex % shuffledTimeSlots.length
+    const baseDate =
+      getExamBaseDate(
+        currentTerm.value,
+      )
 
-      const classroom =
-        shuffledClassrooms[position]
+    /**
+     * 防止排到过去。
+     */
+    const searchStartDate =
+      baseDate < today
+        ? today
+        : baseDate
 
-      const teacher =
-        shuffledTeachers[position]
+    const generated:
+      ArrangeRow[] = []
 
-      const timeSlot =
-        shuffledTimeSlots[timeIndex]
+    for (
+      const course
+      of pendingCourses.value
+    ) {
 
-      return {
-        courseId: String(course.id),
-        courseName: course.name,
+      let arranged =
+        false
 
-        classroomId: String(classroom.id),
-        classroomName: classroom.roomNo,
+      /**
+       * 当前正在尝试的日期。
+       */
+      let currentDate =
+        new Date(
+          searchStartDate,
+        )
 
-        teacherId: String(teacher.id),
-        teacherName: teacher.name,
+      /**
+       * 只要还有教室和教师，
+       * 就持续向后寻找。
+       */
+      while (
+        !arranged
+      ) {
 
-        examDate: formatDate(
-          addDays(startDate, dayOffset),
-        ),
+        const examDate =
+          formatDate(
+            currentDate,
+          )
 
-        startTime: timeSlot.startTime,
-        endTime: timeSlot.endTime,
+        /**
+         * 可以随机时间段，
+         * 也可以直接按早->晚排列。
+         */
+        for (
+          const timeSlot
+          of TIME_SLOTS
+        ) {
 
-        saved: false,
-        saveStatus: 'pending',
-        saveError: '',
+          /**
+           * 1.
+           * 找当前时间段可用教室。
+           */
+          const classroom =
+            classrooms.value.find(
+              room => {
+
+                const roomId =
+                  String(
+                    room.id,
+                  )
+
+                /**
+                 * 数据库已有考试
+                 * 是否占用了这个教室。
+                 */
+                if (
+                  isExistingRoomBusy(
+                    roomId,
+                    examDate,
+                    timeSlot.startTime,
+                    timeSlot.endTime,
+                  )
+                ) {
+                  return false
+                }
+
+                /**
+                 * 本轮一键排考刚生成的数据
+                 * 是否已经占用了这个教室。
+                 */
+                const generatedConflict =
+                  generated.some(
+                    item =>
+                      item.classroomId
+                        === roomId
+                      &&
+                      item.examDate
+                        === examDate
+                      &&
+                      timeOverlap(
+                        item.startTime,
+                        item.endTime,
+                        timeSlot.startTime,
+                        timeSlot.endTime,
+                      ),
+                  )
+
+                return !generatedConflict
+              },
+            )
+
+          /**
+           * 这个时间没有空教室。
+           *
+           * 不报错，
+           * 继续尝试下一个时间段。
+           */
+          if (!classroom) {
+            continue
+          }
+
+          /**
+           * 2.
+           * 找当前时间没有监考任务的教师。
+           */
+          const teacher =
+            teachers.value.find(
+              teacher => {
+
+                const teacherId =
+                  String(
+                    teacher.id,
+                  )
+
+                /**
+                 * 数据库已有监考安排冲突。
+                 */
+                if (
+                  isExistingTeacherBusy(
+                    teacherId,
+                    examDate,
+                    timeSlot.startTime,
+                    timeSlot.endTime,
+                  )
+                ) {
+                  return false
+                }
+
+                /**
+                 * 当前批次刚生成的监考安排冲突。
+                 */
+                const generatedConflict =
+                  generated.some(
+                    item =>
+                      item.teacherId
+                        === teacherId
+                      &&
+                      item.examDate
+                        === examDate
+                      &&
+                      timeOverlap(
+                        item.startTime,
+                        item.endTime,
+                        timeSlot.startTime,
+                        timeSlot.endTime,
+                      ),
+                  )
+
+                return !generatedConflict
+              },
+            )
+
+          /**
+           * 有教室但没有老师。
+           *
+           * 继续尝试下一个时间段。
+           */
+          if (!teacher) {
+            continue
+          }
+
+          /**
+           * 3.
+           * 教室和教师同时可用。
+           *
+           * 终于找到排考时间。
+           */
+          generated.push({
+            courseId:
+              String(
+                course.id,
+              ),
+
+            courseName:
+              course.name,
+
+            classroomId:
+              String(
+                classroom.id,
+              ),
+
+            classroomName:
+              classroom.roomNo,
+
+            teacherId:
+              String(
+                teacher.id,
+              ),
+
+            teacherName:
+              teacher.name,
+
+            examDate,
+
+            startTime:
+              timeSlot.startTime,
+
+            endTime:
+              timeSlot.endTime,
+
+            saved:
+              false,
+
+            saveStatus:
+              'pending',
+
+            saveError:
+              '',
+          })
+
+          arranged =
+            true
+
+          break
+        }
+
+        /**
+         * 今天所有时间段都没找到。
+         *
+         * 不报失败。
+         *
+         * 日期 + 1，
+         * 明天继续找。
+         */
+        if (
+          !arranged
+        ) {
+          currentDate =
+            addDays(
+              currentDate,
+              1,
+            )
+        }
       }
-    })
+    }
+
+    rows.value =
+      generated
 
     generatedAt.value =
-      formatDateTime(new Date())
+      formatDateTime(
+        new Date(),
+      )
 
     ElMessage.success(
-      `已跳过 ${arrangedCourseIds.value.size} 门已排课程，生成 ${rows.value.length} 条新排考结果`,
+      `已跳过 ${arrangedCourseIds.value.size} 门已排课程，生成 ${rows.value.length} 条无冲突排考结果`,
     )
   } finally {
     arranging.value = false

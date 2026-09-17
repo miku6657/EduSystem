@@ -41,11 +41,22 @@ export type ClassroomApplyStatus = '待审核' | '已通过' | '已驳回' | '�
 
 /** 教室申请记录（我的申请 / H5 申请记录） */
 export interface ClassroomApplyRecord {
-  id: number
-  roomId: number
+  id: string
+
+  roomId: string
+
   roomName: string
-  /** 申请人姓名 */
+
+  /**
+   * CAS登录账号
+   */
   applicant: string
+
+  /**
+   * 真实学生/教师姓名
+   */
+  applicantName?: string
+
   /** 申请人所在班级 */
   className: string
   /** YYYY-MM-DD */
@@ -98,11 +109,11 @@ export function getClassroomApprovalList(params?: { status?: ClassroomApprovalFi
 }
 
 /** 管理端：通过教室申请（PUT /classroom-applies/{id}/approve） */
-export function approveClassroomApply(id: number) {
+export function approveClassroomApply(id: string) {
   return http.put<ClassroomApplyRecord>(`/classroom-applies/${id}/approve`)
 }
 
 /** 管理端：驳回教室申请（PUT /classroom-applies/{id}/reject） */
-export function rejectClassroomApply(id: number) {
+export function rejectClassroomApply(id: string) {
   return http.put<ClassroomApplyRecord>(`/classroom-applies/${id}/reject`)
 }

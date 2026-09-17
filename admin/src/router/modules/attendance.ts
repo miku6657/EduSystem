@@ -15,6 +15,12 @@ const attendanceRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/attendance/log-list.vue'),
         meta: { title: '教师考勤日志' },
       },
+      {
+        path: 'teaching-log',
+        name: 'TeachingLogManage',
+        component: () => import('@/views/attendance/teaching-log.vue'),
+        meta: { title: '教学日志' },
+      },
     ],
   },
 ]

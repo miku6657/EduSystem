@@ -183,43 +183,316 @@ export function getExistingExamMonitors() {
 
 /* ==================== 考核方式申报审核 ==================== */
 
-export type MethodAuditStatus = '待审核' | '已通过' | '已驳回'
+/**
+ * 后端真实状态：
+ *
+ * WAIT = 待审核
+ * PASS = 已通过
+ * FAIL = 已驳回
+ */
+export type MethodAuditStatus =
+  | 'WAIT'
+  | 'PASS'
+  | 'FAIL'
 
-export interface ExamMethodApply {
-  id: number
-  courseName: string
-  className: string
-  teacher: string
-  methodName: string
-  reason: string
+/**
+ * 后端 /exam-applies/export
+ * 原始返回结构。
+ */
+interface ExamMethodApplyRaw {
+  id: Id
+
+  courseId: Id
+
+  teacherId: Id
+
+  applyType: string
+
+  reason?: string
+
   status: MethodAuditStatus
-  createTime: string
+
+  createTime?: string
+
+  updateTime?: string
 }
 
-export function getMethodAuditList(params: {
-  courseName?: string
-  teacher?: string
-  status?: '' | MethodAuditStatus
-}) {
-  return http.get<ExamMethodApply[]>('/exam-applies/export', params)
+/**
+ * admin 页面最终使用的数据。
+ *
+ * courseName / teacherName
+ * 由前端根据ID关联出来。
+ */
+export interface ExamMethodApply {
+  id: Id
+
+  courseId: Id
+
+  teacherId: Id
+
+  courseCode?: string
+
+  courseName: string
+
+  teacherName: string
+
+  applyType: string
+
+  reason: string
+
+  status: MethodAuditStatus
+
+  createTime?: string
 }
 
-export function approveMethodAudit(id: number) {
-  return http.put<{ id: number; status: MethodAuditStatus }>(
+/**
+ * 查询考核方式申报列表。
+ *
+ * 后端已有：
+ *
+ * GET /api/exam-applies/export
+ * GET /api/courses
+ * GET /api/teachers
+ *
+ * 后端没有直接返回课程名和教师名，
+ * 所以前端根据ID关联。
+ */
+export async function getMethodAuditList(
+  params: {
+    courseName?: string
+
+    teacher?: string
+
+    status?:
+      | ''
+      | MethodAuditStatus
+  },
+): Promise<
+  ExamMethodApply[]
+> {
+
+  const [
+    applies,
+    coursePage,
+    teacherPage,
+  ] =
+    await Promise.all([
+      http.get<
+        ExamMethodApplyRaw[]
+      >(
+        '/exam-applies/export',
+        {
+          status:
+            params.status
+            || undefined,
+        },
+      ),
+
+      http.get<
+        PageResult<CourseItem>
+      >(
+        '/courses',
+        {
+          pageNo: 1,
+          pageSize: 1000,
+        },
+      ),
+
+      http.get<
+        PageResult<TeacherItem>
+      >(
+        '/teachers',
+        {
+          pageNo: 1,
+          pageSize: 1000,
+        },
+      ),
+    ])
+
+  /**
+   * courseId -> Course
+   */
+  const courseMap =
+    new Map(
+      coursePage.records.map(
+        (course) => [
+          String(course.id),
+          course,
+        ],
+      ),
+    )
+
+  /**
+   * teacherId -> Teacher
+   */
+  const teacherMap =
+    new Map(
+      teacherPage.records.map(
+        (teacher) => [
+          String(teacher.id),
+          teacher,
+        ],
+      ),
+    )
+
+  /**
+   * 后端Entity
+   * ↓
+   * admin展示对象
+   */
+  let rows =
+    applies.map(
+      (item) => {
+
+        const course =
+          courseMap.get(
+            String(
+              item.courseId,
+            ),
+          )
+
+        const teacher =
+          teacherMap.get(
+            String(
+              item.teacherId,
+            ),
+          )
+
+        return {
+          id:
+            String(
+              item.id,
+            ),
+
+          courseId:
+            String(
+              item.courseId,
+            ),
+
+          teacherId:
+            String(
+              item.teacherId,
+            ),
+
+          courseCode:
+            course?.courseCode,
+
+          courseName:
+            course?.name
+            ?? '未知课程',
+
+          teacherName:
+            teacher?.name
+            ?? '未知教师',
+
+          applyType:
+            item.applyType,
+
+          reason:
+            item.reason
+            ?? '',
+
+          status:
+            item.status,
+
+          createTime:
+            item.createTime,
+        }
+      },
+    )
+
+  /**
+   * courseName / teacher
+   * 后端不支持这两个查询参数，
+   * 所以在admin前端筛选。
+   */
+  const courseKeyword =
+    params.courseName
+      ?.trim()
+      .toLowerCase()
+
+  if (courseKeyword) {
+    rows =
+      rows.filter(
+        (item) =>
+          item.courseName
+            .toLowerCase()
+            .includes(
+              courseKeyword,
+            )
+          ||
+          item.courseCode
+            ?.toLowerCase()
+            .includes(
+              courseKeyword,
+            ),
+      )
+  }
+
+  const teacherKeyword =
+    params.teacher
+      ?.trim()
+      .toLowerCase()
+
+  if (teacherKeyword) {
+    rows =
+      rows.filter(
+        (item) =>
+          item.teacherName
+            .toLowerCase()
+            .includes(
+              teacherKeyword,
+            ),
+      )
+  }
+
+  return rows
+}
+
+/**
+ * 通过
+ *
+ * 真实后端：
+ *
+ * PUT
+ * /api/exam-applies/{id}/audit
+ * ?status=PASS
+ */
+export function approveMethodAudit(
+  id: Id,
+) {
+
+  return http.put<void>(
     `/exam-applies/${id}/audit`,
     undefined,
     {
-      params: { status: 'PASS' },
+      params: {
+        status: 'PASS',
+      },
     },
   )
 }
 
-export function rejectMethodAudit(id: number) {
-  return http.put<{ id: number; status: MethodAuditStatus }>(
+/**
+ * 驳回
+ *
+ * 真实后端：
+ *
+ * PUT
+ * /api/exam-applies/{id}/audit
+ * ?status=FAIL
+ */
+export function rejectMethodAudit(
+  id: Id,
+) {
+
+  return http.put<void>(
     `/exam-applies/${id}/audit`,
     undefined,
     {
-      params: { status: 'FAIL' },
+      params: {
+        status: 'FAIL',
+      },
     },
   )
 }

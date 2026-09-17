@@ -1,4 +1,5 @@
 import { http } from '@/utils/request'
+import { getMethodAuditList } from '@/api/exam'
 
 export type Id = string
 
@@ -62,11 +63,19 @@ interface GraduateCheckItem {
 
 interface ClassroomApplyItem {
   id: Id
+
   applicant?: string
+
+  applicantName?: string
+
   applyTime?: string
+
   createTime?: string
+
   roomName?: string
+
   purpose?: string
+
   status?: string
 }
 
@@ -77,6 +86,7 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
     studentsResult,
     graduateChecksResult,
     classroomAppliesResult,
+    examAppliesResult,
   ] = await Promise.allSettled([
     http.get<PageData<unknown>>('/courses', {
       pageNo: 1,
@@ -103,6 +113,13 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
         status: '待审核',
       },
     ),
+
+    /**
+     * 考核方式待审核
+     */
+    getMethodAuditList({
+      status: 'WAIT',
+    }),
   ])
 
   const courseCount =
@@ -201,7 +218,9 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
             : '教室使用申请'
         ),
       applicant:
-        item.applicant ?? '',
+        item.applicantName
+        || item.applicant
+        || '',
       applyTime:
         item.applyTime
         || item.createTime
@@ -211,11 +230,50 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
     }))
 
   /**
+   * 考核方式申报待办
+   */
+  const examApplies =
+    examAppliesResult.status === 'fulfilled'
+      ? examAppliesResult.value
+      : []
+
+  const examApprovals:
+    PendingApprovalItem[] =
+    examApplies.map(
+      (item) => ({
+        id:
+          String(item.id),
+
+        type:
+          '考核方式审批',
+
+        title:
+          `${item.courseName} - ${item.applyType}`,
+
+        applicant:
+          item.teacherName
+          || '未知教师',
+
+        applyTime:
+          item.createTime
+          || '',
+
+        /**
+         * dashboard展示中文，
+         * 不直接显示WAIT。
+         */
+        status:
+          '待审核',
+      }),
+    )
+
+  /**
    * 合并实际待办，只显示最近5条
    */
   const pendingApprovals = [
     ...graduationApprovals,
     ...classroomApprovals,
+    ...examApprovals,
   ]
     .sort((a, b) => {
       if (!a.applyTime) return 1

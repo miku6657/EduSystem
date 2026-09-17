@@ -35,19 +35,52 @@ const tableColumns: TableColumn[] = [
   { label: '操作', type: 'action', width: 140, fixed: 'right' },
 ]
 
-const dialogFields: DialogField[] = [
-  { label: '课程代码', prop: 'courseCode', type: 'input', placeholder: '请输入课程代码' },
-  { label: '课程名称', prop: 'name', type: 'input', placeholder: '请输入课程名称' },
-  { label: '课程类型', prop: 'type', type: 'select', placeholder: '请选择课程类型', options: typeOptions },
-  { label: '学分', prop: 'credit', type: 'select', placeholder: '请选择学分', options: creditOptions },
-  {
-    label: '教研室',
-    prop: 'teachingGroupId',
-    type: 'select',
-    placeholder: '请选择教研室',
-    options: teachingGroupOptions.value,
-  },
-]
+const dialogFields =
+  computed<DialogField[]>(() => [
+    {
+      label: '课程代码',
+      prop: 'courseCode',
+      type: 'input',
+      placeholder: '请输入课程代码',
+    },
+
+    {
+      label: '课程名称',
+      prop: 'name',
+      type: 'input',
+      placeholder: '请输入课程名称',
+    },
+
+    {
+      label: '课程类型',
+      prop: 'type',
+      type: 'select',
+      placeholder: '请选择课程类型',
+      options: typeOptions,
+    },
+
+    {
+      label: '学分',
+      prop: 'credit',
+      type: 'select',
+      placeholder: '请选择学分',
+      options: creditOptions,
+    },
+
+    {
+      label: '教研室',
+      prop: 'teachingGroupId',
+      type: 'select',
+      placeholder: '请选择教研室',
+
+      /**
+       * teachingGroups请求完成以后，
+       * computed会自动重新生成这里的options。
+       */
+      options:
+        teachingGroupOptions.value,
+    },
+  ])
 
 onMounted(async () => {
   try {

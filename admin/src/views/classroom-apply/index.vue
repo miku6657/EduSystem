@@ -172,7 +172,7 @@ const FILTER_OPTIONS: { label: string; value: ClassroomApprovalFilter }[] = [
 const approvalFilter = ref<ClassroomApprovalFilter>('')
 const approvals = ref<ClassroomApplyRecord[]>([])
 const approvalLoading = ref(false)
-const auditingId = ref(0)
+const auditingId = ref('')
 
 async function loadApprovals() {
   approvalLoading.value = true
@@ -229,7 +229,7 @@ async function handleAudit(row: any, action: 'approve' | 'reject') {
   } catch {
     // 错误提示已由请求层统一处理
   } finally {
-    auditingId.value = 0
+    auditingId.value = ''
   }
 }
 
@@ -312,7 +312,26 @@ onMounted(() => {
 
       <el-table v-loading="approvalLoading" :data="approvals" stripe style="width: 100%">
         <el-table-column type="index" label="#" width="52" />
-        <el-table-column prop="applicant" label="申请人姓名" width="110" />
+        <el-table-column
+          label="申请人"
+          width="140"
+        >
+          <template #default="{ row }">
+            <div>
+              {{ row.applicantName || row.applicant }}
+            </div>
+
+            <div
+              v-if="
+                row.applicantName
+                && row.applicantName !== row.applicant
+              "
+              class="cell-account"
+            >
+              {{ row.applicant }}
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="className" label="所在班级" width="150" show-overflow-tooltip />
         <el-table-column prop="roomName" label="申请教室" min-width="140" show-overflow-tooltip />
         <el-table-column label="使用时间段" min-width="200">
@@ -493,6 +512,12 @@ onMounted(() => {
 .cell-done {
   color: var(--el-text-color-placeholder);
   font-size: 13px;
+}
+
+.cell-account {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #909399;
 }
 
 /* ===== FullCalendar 单元格着色：绿=空闲 / 黄=有待审核 / 红=占用 ===== */

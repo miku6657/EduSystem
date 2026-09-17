@@ -3,7 +3,6 @@ import dashboardRoutes from './dashboard'
 import teachingBaseRoutes from './teaching-base'
 import examRoutes from './exam'
 import classroomRoutes from './classroom'
-import courseAdjustRoutes from './course-adjust'
 import graduationRoutes from './graduation'
 import attendanceRoutes from './attendance'
 
@@ -17,7 +16,6 @@ export const layoutModuleRoutes: RouteRecordRaw[] = [
   ...teachingBaseRoutes,
   ...examRoutes,
   ...classroomRoutes,
-  ...courseAdjustRoutes,
   ...graduationRoutes,
   ...attendanceRoutes,
 ]
