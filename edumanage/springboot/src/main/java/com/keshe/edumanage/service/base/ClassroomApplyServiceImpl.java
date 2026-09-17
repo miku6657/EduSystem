@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.keshe.edumanage.entity.base.Classroom;
 import com.keshe.edumanage.entity.base.ClassroomApply;
+import com.keshe.edumanage.entity.base.Student;
+import com.keshe.edumanage.entity.base.Teacher;
+import com.keshe.edumanage.entity.system.User;
 import com.keshe.edumanage.mapper.base.ClassroomApplyMapper;
+import com.keshe.edumanage.service.UserService;
 import com.keshe.edumanage.vo.ClassroomApplyVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,12 @@ public class ClassroomApplyServiceImpl
         implements ClassroomApplyService {
 
     private final ClassroomService classroomService;
+
+    private final UserService userService;
+
+    private final StudentService studentService;
+
+    private final TeacherService teacherService;
 
     @Override
     public boolean checkConflict(
@@ -46,7 +56,13 @@ public class ClassroomApplyServiceImpl
             String username
     ) {
         return lambdaQuery()
-                .eq(ClassroomApply::getApplicant, username)
+                .eq(
+                        ClassroomApply::getApplicant,
+                        username
+                )
+                .orderByDesc(
+                        ClassroomApply::getCreateTime
+                )
                 .list();
     }
 
@@ -90,6 +106,11 @@ public class ClassroomApplyServiceImpl
         vo.setRoomId(apply.getRoomId());
         vo.setRoomName(roomNameOf(apply.getRoomId()));
         vo.setApplicant(apply.getApplicant());
+        vo.setApplicantName(
+                applicantNameOf(
+                        apply.getApplicant()
+                )
+        );
         vo.setClassName(apply.getClassName());
         vo.setDate(apply.getApplyDate());
         vo.setTimeSlot(apply.getTimeSlot());
@@ -109,5 +130,101 @@ public class ClassroomApplyServiceImpl
         }
         Classroom classroom = classroomService.getById(roomId);
         return classroom == null ? null : classroom.getRoomNo();
+    }
+
+    /**
+     * 根据登录账号解析真实姓名。
+     *
+     * 新身份体系：
+     *
+     * applicant
+     * ↓
+     * sys_user.username
+     * ↓
+     * sys_user.business_id
+     * ↓
+     * STUDENT -> base_student
+     * TEACHER -> base_teacher
+     */
+    private String applicantNameOf(
+            String username
+    ) {
+
+        if (
+                username == null
+                || username.isBlank()
+        ) {
+            return null;
+        }
+
+        User user =
+                userService.findByUsername(
+                        username
+                );
+
+        /**
+         * 找不到sys_user时，
+         * 至少返回原账号，
+         * 页面不会空白。
+         */
+        if (user == null) {
+            return username;
+        }
+
+        Long businessId =
+                user.getBusinessId();
+
+        if (businessId == null) {
+            return username;
+        }
+
+        String role =
+                user.getRole();
+
+        /**
+         * 学生
+         */
+        if (
+                "STUDENT".equalsIgnoreCase(
+                        role
+                )
+        ) {
+
+            Student student =
+                    studentService.getById(
+                            businessId
+                    );
+
+            if (
+                    student != null
+                    && student.getName() != null
+            ) {
+                return student.getName();
+            }
+        }
+
+        /**
+         * 教师
+         */
+        if (
+                "TEACHER".equalsIgnoreCase(
+                        role
+                )
+        ) {
+
+            Teacher teacher =
+                    teacherService.getById(
+                            businessId
+                    );
+
+            if (
+                    teacher != null
+                    && teacher.getName() != null
+            ) {
+                return teacher.getName();
+            }
+        }
+
+        return username;
     }
 }

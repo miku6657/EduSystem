@@ -1,53 +1,94 @@
 package com.keshe.edumanage.service.exam;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.keshe.edumanage.dto.ExamArrangeDTO;
 import com.keshe.edumanage.entity.exam.ExamRetake;
+import com.keshe.edumanage.entity.exam.ExamScore;
 
 import java.util.List;
 
-/**
- * 补考重修业务接口
- * <p>补考安排：从鹏达读取数据后安排补考场次；
- * 重修考试：学生网上申请，教务批准后安排考试</p>
- */
-public interface ExamRetakeService extends IService<ExamRetake> {
+public interface ExamRetakeService
+        extends IService<ExamRetake> {
 
-    /** 类型：补考 */
     String TYPE_MAKEUP = "补考";
 
-    /** 类型：重修 */
     String TYPE_RETAKE = "重修";
 
-    /**
-     * 学生申请重修（同一课程已有申请时不允许重复申请，
-     * 且该课程历史成绩及格时不允许申请）
-     *
-     * @param studentId 学生ID
-     * @param courseId  课程ID
-     */
-    void applyRetake(Long studentId, Long courseId);
+    String STATUS_WAIT = "WAIT";
+
+    String STATUS_APPROVED = "APPROVED";
+
+    String STATUS_REJECTED = "REJECTED";
+
+    String STATUS_ARRANGED = "ARRANGED";
+
+    String STATUS_COMPLETED = "COMPLETED";
 
     /**
-     * 安排补考/重修考试（将记录关联到具体考试场次）
-     *
-     * @param id     补考重修记录ID
-     * @param examId 考试ID
+     * 学生申请重修。
      */
-    void assignExam(Long id, Long examId);
+    void applyRetake(
+            Long studentId,
+            Long courseId
+    );
 
     /**
-     * 查询某位学生的补考重修记录
-     *
-     * @param studentId 学生ID
-     * @return 补考重修记录列表
+     * 管理员通过申请。
      */
-    List<ExamRetake> listByStudent(Long studentId);
+    void approve(Long id);
 
     /**
-     * 按类型查询记录
-     *
-     * @param type 类型：补考 / 重修
-     * @return 补考重修记录列表
+     * 管理员驳回申请。
      */
-    List<ExamRetake> listByType(String type);
+    void reject(Long id);
+
+    /**
+     * 给已经批准的申请安排考试。
+     */
+    void assignExam(
+            Long id,
+            Long examId
+    );
+
+    /**
+     * 为已批准的重修申请创建专门的重修考试。
+     *
+     * APPROVED -> ARRANGED
+     */
+    void arrangeRetakeExam(
+            Long id,
+            ExamArrangeDTO dto
+    );
+
+    /**
+     * 学生自己的申请。
+     */
+    List<ExamRetake> listByStudent(
+            Long studentId
+    );
+
+    /**
+     * 按类型查询。
+     */
+    List<ExamRetake> listByType(
+            String type
+    );
+
+    /**
+     * 查询某场重修考试的学生。
+     */
+    List<ExamRetake> listByExam(
+            Long examId
+    );
+
+    /**
+     * 教师录入重修考试成绩。
+     *
+     * 不覆盖原期末考试成绩，
+     * 而是为本次重修考试新增一条成绩记录。
+     */
+    void saveRetakeScores(
+            Long examId,
+            List<ExamScore> scores
+    );
 }

@@ -18,7 +18,15 @@ public class ClassroomApplyVO {
 
     private String roomName;
 
+    /**
+     * CAS账号
+     */
     private String applicant;
+
+    /**
+     * 学生/教师真实姓名
+     */
+    private String applicantName;
 
     private String className;
 
