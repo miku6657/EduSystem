@@ -1,19 +1,36 @@
 <script setup lang="ts">
 /**
  * 教师 · 学生考勤
- * 点名录入：GET /api/student/list-by-class/{classId}、POST /api/student-attendance/record
- * 本周报表：GET /api/student-attendance/weekly-report?classId&date（date 传该周任意一天）
- * 班级 / 课程来自缺口接口 GET /api/teacher/my-classes、GET /api/teacher/my-courses
+ * 使用真实后端接口：
+ *
+ * GET  /api/classes
+ * GET  /api/courses
+ * GET  /api/students?classId=...
+ * POST /api/student-attendances
+ * GET  /api/student-attendances/weekly-report
+ *
+ * 当前不维护教师-课程、教师-班级关系，
+ * 教师端直接使用系统全部班级和课程。
  *
  * 结构：顶部卡片头（PageHeader + 主操作 + StatBar）+ van-tabs（点名录入 / 本周报表）+ PageState 三态。
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { showToast } from 'vant'
-import { getWeeklyReport, recordAttendance } from '@/api/attendance'
-import type { StudentAttendanceRecord, WeeklyReportRow } from '@/api/attendance'
-import { listMyClasses, listMyCourses, listStudentsByClass } from '@/api/base'
-import type { ClassInfo, Course, Student } from '@/api/base'
-import { useUserStore } from '@/stores/user'
+import {
+  getWeeklyReport,
+  listAttendanceClasses,
+  listAttendanceCourses,
+  listAttendanceStudents,
+  recordAttendance,
+} from '@/api/attendance'
+
+import type {
+  AttendanceClass,
+  AttendanceCourse,
+  AttendanceStudent,
+  StudentAttendanceRecord,
+  WeeklyReportRow,
+} from '@/api/attendance'
 import { useAsyncData } from '@/composables/useAsyncData'
 import PageHeader from '@/components/PageHeader.vue'
 import PageState from '@/components/PageState.vue'
@@ -21,21 +38,18 @@ import StatBar from '@/components/StatBar.vue'
 import { STUDENT_ATTENDANCE_STATUS } from '@/constants/dict'
 import { todayStr } from '@/utils/format'
 
-const userStore = useUserStore()
-/** 教师工号；0 = 业务身份未解析成功 */
-const teacherId = computed(() => userStore.businessId)
 const today = todayStr()
 const maxDate = new Date()
 /** 班级 / 日期选择器共用一个弹层，用 target 区分「点名录入」与「本周报表」 */
 const pickerTarget = ref<'entry' | 'report'>('entry')
 
-const classId = ref(0)
-const courseId = ref(0)
+const classId = ref('')
+const courseId = ref('')
 const attendanceDate = ref(today)
-const reportClassId = ref(0)
+const reportClassId = ref('')
 const reportDate = ref(today)
 /** 学生点名标记：studentId → 状态 */
-const marks = ref<Record<number, string>>({})
+const marks = ref<Record<string, string>>({})
 const saving = ref(false)
 
 const {
@@ -43,8 +57,8 @@ const {
   loading: classLoading,
   error: classError,
   reload: reloadClasses,
-} = useAsyncData<ClassInfo[]>(
-  () => (teacherId.value ? listMyClasses(teacherId.value) : Promise.resolve([])),
+} = useAsyncData<AttendanceClass[]>(
+  () => listAttendanceClasses(),
   [],
 )
 const {
@@ -52,8 +66,8 @@ const {
   loading: courseLoading,
   error: courseError,
   reload: reloadCourses,
-} = useAsyncData<Course[]>(
-  () => (teacherId.value ? listMyCourses(teacherId.value) : Promise.resolve([])),
+} = useAsyncData<AttendanceCourse[]>(
+  () => listAttendanceCourses(),
   [],
 )
 const {
@@ -61,8 +75,8 @@ const {
   loading: studentLoading,
   error: studentError,
   reload: reloadStudents,
-} = useAsyncData<Student[]>(
-  () => (classId.value ? listStudentsByClass(classId.value) : Promise.resolve([])),
+} = useAsyncData<AttendanceStudent[]>(
+  () => (classId.value ? listAttendanceStudents(classId.value) : Promise.resolve([])),
   [],
 )
 const {
@@ -78,18 +92,16 @@ const {
   [],
 )
 
-/** 按当前学生列表重建标记；status 为空时保留已改动，否则统一设为该状态 */
-function buildMarks(status?: string): Record<number, string> {
-  const next: Record<number, string> = {}
+/** 按当前学生列表重建标记；默认所有学生「正常」，status 可整体覆盖 */
+function buildMarks(status?: string): Record<string, string> {
+  const result: Record<string, string> = {}
   for (const student of students.value) {
-    if (student.id) {
-      next[student.id] = status ?? marks.value[student.id] ?? '正常'
-    }
+    result[String(student.id)] = status ?? '正常'
   }
-  return next
+  return result
 }
 
-/** 学生列表变化后重建标记（默认「正常」，保留已改动） */
+/** 学生列表变化后重建标记（默认全部「正常」） */
 watch(students, () => {
   marks.value = buildMarks()
 })
@@ -117,38 +129,34 @@ function markAllNormal() {
 }
 
 async function submitRecords() {
-  if (!teacherId.value) {
-    showToast('未解析到教师工号')
+  if (!classId.value) {
+    showToast('请选择班级')
     return
   }
-  if (!classId.value || !courseId.value) {
-    showToast('请先选择班级与课程')
+  if (!courseId.value) {
+    showToast('请选择课程')
     return
   }
-  const records: StudentAttendanceRecord[] = []
-  for (const student of students.value) {
-    if (!student.id) {
-      continue
-    }
-    records.push({
-      studentId: student.id,
-      courseId: courseId.value,
-      attendanceDate: attendanceDate.value,
-      status: marks.value[student.id] ?? '正常',
-    })
-  }
-  if (records.length === 0) {
+  if (students.value.length === 0) {
     showToast('该班级暂无学生')
     return
   }
+  const records: StudentAttendanceRecord[] = students.value.map((student) => ({
+    studentId: String(student.id),
+    courseId: courseId.value,
+    attendanceDate: attendanceDate.value,
+    status: marks.value[String(student.id)] ?? '正常',
+  }))
   saving.value = true
   try {
     await recordAttendance(records)
     showToast(`已提交 ${records.length} 名学生的考勤`)
-    marks.value = buildMarks('正常') // 清空异常标记
-    reloadReport()
+    // 当前班级自动切换到周报查询
+    reportClassId.value = classId.value
+    reportDate.value = attendanceDate.value
+    await reloadReport()
   } catch {
-    // 失败原因（缺学生/课程/日期）由请求层统一 toast
+    // request.ts统一提示
   } finally {
     saving.value = false
   }
@@ -160,19 +168,22 @@ const showCoursePicker = ref(false)
 const showDatePicker = ref(false)
 
 const classText = computed(
-  () => classes.value.find((item) => item.id === classId.value)?.name ?? '',
+  () => classes.value.find((item) => String(item.id) === classId.value)?.name ?? '',
 )
 const courseText = computed(
-  () => courses.value.find((item) => item.id === courseId.value)?.name ?? '',
+  () => courses.value.find((item) => String(item.id) === courseId.value)?.name ?? '',
 )
 const reportClassText = computed(
-  () => classes.value.find((item) => item.id === reportClassId.value)?.name ?? '',
+  () => classes.value.find((item) => String(item.id) === reportClassId.value)?.name ?? '',
 )
 const classColumns = computed(() =>
-  classes.value.map((item) => ({ text: item.name, value: item.id })),
+  classes.value.map((item) => ({ text: item.name, value: String(item.id) })),
 )
 const courseColumns = computed(() =>
-  courses.value.map((item) => ({ text: item.name, value: item.id })),
+  courses.value.map((item) => ({
+    text: `${item.name}（${item.courseCode}）`,
+    value: String(item.id),
+  })),
 )
 const pickerClassId = computed(() =>
   pickerTarget.value === 'entry' ? classId.value : reportClassId.value,
@@ -185,13 +196,14 @@ interface PickerPayload {
   selectedOptions?: Array<{ value?: string | number } | undefined>
 }
 
-function pickId(payload: PickerPayload): number {
-  return Number(payload.selectedOptions?.[0]?.value ?? 0)
+function pickId(payload: PickerPayload): string {
+  const value = payload.selectedOptions?.[0]?.value
+  return value === undefined || value === null ? '' : String(value)
 }
 
 function openClassPicker(target: 'entry' | 'report') {
   if (!classes.value.length) {
-    showToast('暂无任教班级')
+    showToast('系统暂无班级数据')
     return
   }
   pickerTarget.value = target
@@ -200,7 +212,7 @@ function openClassPicker(target: 'entry' | 'report') {
 
 function openCoursePicker() {
   if (!courses.value.length) {
-    showToast('暂无任教课程')
+    showToast('系统暂无课程数据')
     return
   }
   showCoursePicker.value = true
@@ -253,15 +265,6 @@ function rateText(rate?: number | null): string {
   return rate === null || rate === undefined ? '—' : `${rate}%`
 }
 
-/** 工号未解析时重试解析业务身份并重新取数 */
-async function retryProfile() {
-  await userStore.resolveProfile(true)
-  reloadClasses()
-  reloadCourses()
-  reloadStudents()
-  reloadReport()
-}
-
 onMounted(() => {
   reloadClasses()
   reloadCourses()
@@ -270,13 +273,8 @@ onMounted(() => {
 
 <template>
   <div>
-    <van-empty v-if="!teacherId" description="未解析到教师工号">
-      <van-button round type="primary" size="small" @click="retryProfile">重新解析身份</van-button>
-    </van-empty>
-
-    <template v-else>
-      <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
-      <div class="st-card">
+    <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
+    <div class="st-card">
         <PageHeader title="学生考勤">
           <template #actions>
             <van-button size="small" type="primary" :loading="saving" @click="submitRecords">
@@ -295,7 +293,7 @@ onMounted(() => {
             :loading="classLoading || courseLoading"
             :error="classError || courseError"
             :empty="!classes.length || !courses.length"
-            :empty-text="classes.length ? '暂无任教课程' : '暂无任教班级'"
+            :empty-text="classes.length ? '系统暂无课程数据' : '系统暂无班级数据'"
             @retry="reloadOptions"
           >
             <div class="st-card">
@@ -343,7 +341,7 @@ onMounted(() => {
                   <span class="st-muted">{{ student.studentNo }}</span>
                 </div>
                 <van-radio-group
-                  v-model="marks[student.id ?? 0]"
+                  v-model="marks[student.id]"
                   direction="horizontal"
                   class="sa__options"
                 >
@@ -365,7 +363,7 @@ onMounted(() => {
           <PageState
             :loading="classLoading"
             :empty="!classes.length"
-            :empty-text="classError || '暂无任教班级'"
+            :empty-text="classError || '系统暂无班级数据'"
             @retry="reloadClasses"
           >
             <div class="st-card">
@@ -393,24 +391,22 @@ onMounted(() => {
               :empty-text="reportClassId ? '本周暂无考勤数据' : '请先选择班级'"
               @retry="reloadReport"
             >
-              <div v-for="row in report" :key="row.studentId ?? row.studentNo" class="st-card">
+              <div v-for="row in report" :key="row.studentNo ?? row.studentName" class="st-card">
                 <div class="st-row">
-                  <span class="sa__name">{{ row.studentName || `学生#${row.studentId}` }}</span>
+                  <span class="sa__name">{{ row.studentName || '未知学生' }}</span>
                   <span class="st-muted">{{ row.studentNo || '—' }}</span>
                 </div>
                 <div class="sa__report">
-                  <span>正常 {{ row.normal ?? 0 }}</span>
-                  <span>迟到 {{ row.late ?? 0 }}</span>
-                  <span>缺勤 {{ row.absent ?? 0 }}</span>
-                  <span>请假 {{ row.leave ?? 0 }}</span>
-                  <span>出勤率 {{ rateText(row.rate) }}</span>
+                  <span>总记录 {{ row.total }}</span>
+                  <span>正常 {{ row.normal }}</span>
+                  <span>异常 {{ row.abnormal }}</span>
+                  <span>正常率 {{ rateText(row.rate) }}</span>
                 </div>
               </div>
             </PageState>
           </PageState>
         </van-tab>
       </van-tabs>
-    </template>
 
     <!-- 班级 / 课程 / 日期选择器 -->
     <van-popup v-model:show="showClassPicker" position="bottom" round>

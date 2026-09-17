@@ -17,15 +17,6 @@ export interface ExamMonitor {
 }
 
 /**
- * 教师：我的监考任务
- * 后端 GET /api/exam-monitor/list-by-teacher/{teacherId}
- */
-export async function listMyInvigilations(teacherId: number): Promise<ExamMonitor[]> {
-  const data = await http.get<unknown>(`/exam-monitor/list-by-teacher/${teacherId}`)
-  return normalizeList<ExamMonitor>(data)
-}
-
-/**
  * 查询某场考试的监考安排
  * 后端 GET /api/exam-monitor/list-by-exam/{examId}
  */

@@ -18,7 +18,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     StatBar: typeof import('./components/StatBar.vue')['default']
     VanButton: typeof import('vant/es')['Button']
-    VanCell: typeof import('vant/es')['Cell']
     VanCellGroup: typeof import('vant/es')['CellGroup']
     VanDatePicker: typeof import('vant/es')['DatePicker']
     VanDropdownItem: typeof import('vant/es')['DropdownItem']

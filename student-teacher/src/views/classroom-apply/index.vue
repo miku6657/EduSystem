@@ -62,18 +62,30 @@ const rooms = ref<Classroom[]>([])
 const roomsLoading = ref(false)
 
 const form = reactive<{
-  roomId: number
+  roomId: string
+
   className: string
+
   applyDate: string
+
   timeSlot: string
+
   purpose: string
+
   reason: string
 }>({
-  roomId: 0,
+  roomId: '',
+
   className: '',
-  applyDate: todayStr(),
-  timeSlot: '第3-4节',
+
+  applyDate:
+    todayStr(),
+
+  timeSlot:
+    '第3-4节',
+
   purpose: '',
+
   reason: '',
 })
 
@@ -91,27 +103,66 @@ const maxDate = (() => {
   return date
 })()
 
-const roomText = computed(() => {
-  const room = rooms.value.find((item) => item.id === form.roomId)
-  return room ? `${room.roomNo}（${room.type ?? '教室'}·${room.capacity ?? '—'} 座）` : ''
-})
-const roomColumns = computed(() =>
-  rooms.value.map((item) => ({
-    text: `${item.roomNo}（${item.type ?? '教室'}·${item.capacity ?? '—'} 座）`,
-    value: item.id,
-  })),
-)
+const roomText =
+  computed(() => {
+
+    const room =
+      rooms.value.find(
+        (item) =>
+          String(
+            item.id,
+          )
+          ===
+          form.roomId,
+      )
+
+    return room
+      ? `${room.roomNo}（${room.type ?? '教室'}·${room.capacity ?? '—'} 座）`
+      : ''
+  })
+const roomColumns =
+  computed(() =>
+    rooms.value
+      .filter(
+        (item) =>
+          item.id !== undefined,
+      )
+      .map(
+        (item) => ({
+          text:
+            `${item.roomNo}（${item.type ?? '教室'}·${item.capacity ?? '—'} 座）`,
+
+          value:
+            String(
+              item.id,
+            ),
+        }),
+      ),
+  )
 
 interface PickerPayload {
   selectedOptions?: Array<{ value?: string | number } | undefined>
 }
 
-function onRoomConfirm(payload: PickerPayload) {
-  const value = payload.selectedOptions?.[0]?.value
-  if (typeof value === 'number') {
-    form.roomId = value
+function onRoomConfirm(
+  payload: PickerPayload,
+) {
+  const value =
+    payload
+      .selectedOptions
+      ?.[0]
+      ?.value
+
+  if (
+    value !== undefined
+    && value !== null
+  ) {
+    form.roomId =
+      String(value)
   }
-  showRoomPicker.value = false
+
+  showRoomPicker.value =
+    false
 }
 
 /** 首次打开弹层时拉教室列表（一次 50 条够选） */
@@ -131,7 +182,7 @@ async function loadRooms() {
 }
 
 function openForm() {
-  form.roomId = 0
+  form.roomId = ''
   form.className = ''
   form.applyDate = todayStr()
   form.timeSlot = '第3-4节'
@@ -161,12 +212,25 @@ async function onSubmit() {
   submitting.value = true
   try {
     await submitClassroomApply({
-      roomId: form.roomId,
-      className: form.className || undefined,
-      applyDate: form.applyDate,
-      timeSlot: form.timeSlot,
-      purpose: form.purpose || undefined,
-      reason: form.reason.trim(),
+      roomId:
+        form.roomId,
+
+      className:
+        form.className
+        || undefined,
+
+      applyDate:
+        form.applyDate,
+
+      timeSlot:
+        form.timeSlot,
+
+      purpose:
+        form.purpose
+        || undefined,
+
+      reason:
+        form.reason.trim(),
     })
     showSuccessToast('申请已提交，等待审批')
     showForm.value = false
@@ -179,7 +243,8 @@ async function onSubmit() {
 }
 
 /* ------------------------------ 撤回 ------------------------------ */
-const cancellingId = ref(0)
+const cancellingId =
+  ref('')
 
 function canCancel(row: ClassroomApply): boolean {
   return row.status === '待审核'
@@ -194,15 +259,22 @@ async function onCancel(row: ClassroomApply) {
   } catch {
     return
   }
-  cancellingId.value = row.id ?? 0
+  cancellingId.value =
+    row.id ?? ''
   try {
-    await cancelClassroomApply(row.id as number)
+    if (!row.id) {
+      return
+    }
+
+    await cancelClassroomApply(
+      row.id,
+    )
     showToast('已撤回申请')
     await reload()
   } catch {
     // 请求层已 toast
   } finally {
-    cancellingId.value = 0
+    cancellingId.value = ''
   }
 }
 

@@ -496,28 +496,6 @@ const retakes: MockRow[] = [
   { id: 2, studentId: 4, courseId: 1, examId: null, type: '补考' },
 ]
 
-/** 专升本报名（applyStatus：WAIT/PASS/FAIL） */
-const upgradeApplies: MockRow[] = [
-  {
-    id: 1,
-    studentId: 2,
-    schoolName: '华中科技大学',
-    majorName: '计算机科学与技术',
-    applyStatus: 'WAIT',
-    remark: null,
-    createTime: `${dayOffset(-5)} 10:20`,
-  },
-  {
-    id: 2,
-    studentId: 3,
-    schoolName: '武汉理工大学',
-    majorName: '软件工程',
-    applyStatus: 'PASS',
-    remark: '符合报名条件',
-    createTime: `${dayOffset(-9)} 15:02`,
-  },
-]
-
 /** 毕业资格审核 */
 const graduateChecks: MockRow[] = [
   {
@@ -757,15 +735,6 @@ function enrichRetake(row: MockRow): MockRow {
   }
 }
 
-function enrichUpgrade(row: MockRow): MockRow {
-  const student = studentOf(row.studentId)
-  return {
-    ...row,
-    studentName: student?.name ?? null,
-    studentNo: student?.studentNo ?? null,
-  }
-}
-
 function enrichGraduateCheck(row: MockRow): MockRow {
   const student = studentOf(row.studentId)
   return {
@@ -806,18 +775,6 @@ function enrichClassroomApply(row: MockRow): MockRow {
     ...row,
     roomName: room?.roomNo ?? `教室#${row.roomId}`,
     campusId: room?.campusId ?? null,
-  }
-}
-
-/** 教学任务补全课程/班级/教师/教室名称，课表直接可用 */
-function enrichTeachingTask(row: MockRow): MockRow {
-  const room = classrooms.find((item) => item.id === row.classroomId)
-  return {
-    ...row,
-    courseName: courseOf(row.courseId)?.name ?? `课程#${row.courseId}`,
-    className: classOf(row.classId)?.name ?? `班级#${row.classId}`,
-    teacherName: teacherOf(row.teacherId)?.name ?? null,
-    roomName: room?.roomNo ?? null,
   }
 }
 
@@ -974,28 +931,6 @@ function handleApi(ctx: MockContext) {
       .filter((item) => item.teacherId === teacherId)
       .map((item) => item.courseId)
     return ok(courses.filter((item) => ids.includes(item.id)))
-  }
-
-  /* ---------- 教学任务 / 课表（?teacherId= 教师视角，?classId= 学生视角） ---------- */
-  if (path === '/api/teaching-tasks') {
-    const teacherId = Number(query.teacherId ?? 0)
-    const classId = Number(query.classId ?? 0)
-    let list = teachingTasks
-    if (teacherId) {
-      list = list.filter((item) => item.teacherId === teacherId)
-    } else if (classId) {
-      list = list.filter((item) => item.classId === classId)
-    }
-    return ok(
-      list
-        .slice()
-        .sort(
-          (a, b) =>
-            Number(a.weekday ?? 9) - Number(b.weekday ?? 9) ||
-            Number(a.startSection ?? 0) - Number(b.startSection ?? 0),
-        )
-        .map(enrichTeachingTask),
-    )
   }
 
   /* ---------- 调课申请：提交 / 我的 / 审批列表 / 撤销 ---------- */
@@ -1456,50 +1391,6 @@ function handleApi(ctx: MockContext) {
     return ok(retakes.filter((item) => item.type === type).map(enrichRetake))
   }
 
-  /* ---------- 专升本报名 ---------- */
-  if (path === '/api/upgrade-apply/apply') {
-    const studentId = Number(body.studentId ?? 0)
-    if (!studentId) {
-      return fail('缺少学生信息')
-    }
-    if (!String(body.schoolName ?? '').trim() || !String(body.majorName ?? '').trim()) {
-      return fail('请填写报考院校与专业')
-    }
-    const pending = upgradeApplies.find(
-      (item) => item.studentId === studentId && item.applyStatus === 'WAIT',
-    )
-    if (pending) {
-      return fail('已有待审核的报名，请等待审核结果')
-    }
-    const created = {
-      id: nextId(),
-      studentId,
-      schoolName: String(body.schoolName).trim(),
-      majorName: String(body.majorName).trim(),
-      applyStatus: 'WAIT',
-      remark: body.remark ? String(body.remark) : null,
-      createTime: nowText(),
-    }
-    upgradeApplies.push(created)
-    return ok(enrichUpgrade(created), '报名已提交')
-  }
-
-  if (path === '/api/upgrade-apply/my/list') {
-    const studentId = Number(query.studentId ?? 0)
-    const list = upgradeApplies
-      .filter((item) => item.studentId === studentId)
-      .sort((a, b) => Number(b.id) - Number(a.id))
-      .map(enrichUpgrade)
-    return ok(list)
-  }
-
-  const upgradeDetail = pathParams(/^\/api\/upgrade-apply\/(\d+)$/)
-  if (upgradeDetail) {
-    const id = Number(upgradeDetail[1])
-    const row = upgradeApplies.find((item) => item.id === id)
-    return row ? ok(enrichUpgrade(row)) : fail('报名记录不存在')
-  }
-
   /* ---------- 毕业资格 ---------- */
   const graduateByStudent = pathParams(/^\/api\/graduate-check\/by-student\/(\d+)$/)
   if (graduateByStudent) {
@@ -1558,16 +1449,6 @@ function handleApi(ctx: MockContext) {
   }
 
   /* ---------- 监考安排 ---------- */
-  const monitorByTeacher = pathParams(/^\/api\/exam-monitor\/list-by-teacher\/(\d+)$/)
-  if (monitorByTeacher) {
-    const teacherId = Number(monitorByTeacher[1])
-    const list = examMonitors
-      .filter((item) => item.teacherId === teacherId)
-      .map(enrichMonitor)
-      .sort((a, b) => String(a.examDate ?? '').localeCompare(String(b.examDate ?? '')))
-    return ok(list)
-  }
-
   const monitorByExam = pathParams(/^\/api\/exam-monitor\/list-by-exam\/(\d+)$/)
   if (monitorByExam) {
     const examId = Number(monitorByExam[1])

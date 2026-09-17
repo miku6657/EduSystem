@@ -44,12 +44,49 @@ export function pageClasses(
 }
 
 /**
- * 查询某班级的学生
- * 后端 GET /api/students?classId={classId}（RESTful 风格：同一资源用 query 过滤）
+ * 查询全部班级。
+ *
+ * 真实后端：
+ * GET /api/classes?pageNo=1&pageSize=500
  */
-export async function listStudentsByClass(classId: number): Promise<Student[]> {
-  const data = await http.get<unknown>('/students', { classId })
-  return normalizeList<Student>(data)
+export async function listClasses():
+  Promise<ClassInfo[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/classes',
+      {
+        pageNo: 1,
+        pageSize: 500,
+      },
+    )
+
+  return normalizeList<ClassInfo>(
+    data,
+  )
+}
+
+/**
+ * 查询某个班级的学生。
+ *
+ * 真实后端：
+ * GET /api/students?classId=xxx
+ */
+export async function listStudentsByClass(
+  classId: string | number,
+): Promise<Student[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/students',
+      {
+        classId,
+      },
+    )
+
+  return normalizeList<Student>(
+    data,
+  )
 }
 
 /**

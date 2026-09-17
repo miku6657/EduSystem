@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 学生 · 我的考勤
- * 数据源：GET /api/student-attendance/list-by-student?studentId&startDate&endDate
+ * 数据源：GET /api/student-attendances/students/{studentId}?startDate&endDate
  *
  * 结构与 scores.vue 保持一致：顶部卡片头（PageHeader + StatBar）+ useAsyncData +
  * 显式 import + Vant 组件 + 下拉刷新 + PageState 三态。
@@ -120,7 +120,7 @@ onMounted(reload)
         :error="error"
         :empty="!userStore.businessId || records.length === 0"
         :empty-text="
-          userStore.businessId ? '该时间段内暂无考勤记录' : '未解析到学号，请确认登录账号为学号'
+          userStore.businessId ? '该时间段内暂无考勤记录' : '当前账号未绑定学生档案'
         "
         @retry="reload"
       >

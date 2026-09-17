@@ -1,274 +1,656 @@
 <script setup lang="ts">
+import {
+  computed,
+  onMounted,
+  ref,
+} from 'vue'
+
+import {
+  showConfirmDialog,
+  showToast,
+} from 'vant'
+
+import {
+  applyRetake,
+  listFailedCourses,
+  listMyRetakes,
+} from '@/api/retake'
+
+import type {
+  ExamRetake,
+  FailedCourse,
+  RetakeStatus,
+} from '@/api/retake'
+
+import {
+  useUserStore,
+} from '@/stores/user'
+
+import PageHeader
+  from '@/components/PageHeader.vue'
+
+import StatBar
+  from '@/components/StatBar.vue'
+
+const userStore =
+  useUserStore()
+
+const failedCourses =
+  ref<FailedCourse[]>([])
+
+const retakes =
+  ref<ExamRetake[]>([])
+
+const loading =
+  ref(false)
+
+const refreshing =
+  ref(false)
+
+const submittingCourseId =
+  ref('')
+
+const activeTab =
+  ref(0)
+
+const studentId =
+  computed(
+    () =>
+      userStore.businessId
+      ?? '',
+  )
+
 /**
- * 学生 · 补考重修
- * 数据源：GET /api/retake/list-by-student/{studentId}
- * 申请：POST /api/retake/apply?studentId&courseId&type（type：补考 / 重修）
+ * 正在处理中的申请。
  *
- * 结构对齐 scores.vue：顶部卡片头（PageHeader + StatBar）+ 下拉刷新 + PageState 三态。
+ * REJECTED / COMPLETED
+ * 不阻止再次申请。
  */
-import { computed, onMounted, ref } from 'vue'
-import { showConfirmDialog, showToast } from 'vant'
-import { applyRetake, listMyRetakes } from '@/api/retake'
-import type { ExamRetake } from '@/api/retake'
-import { pageCourses } from '@/api/base'
-import type { Course } from '@/api/base'
-import { useUserStore } from '@/stores/user'
-import { useAsyncData } from '@/composables/useAsyncData'
-import PageHeader from '@/components/PageHeader.vue'
-import PageState from '@/components/PageState.vue'
-import StatBar from '@/components/StatBar.vue'
-import { RETAKE_TYPE_OPTIONS } from '@/constants/dict'
+const activeRetakeMap =
+  computed(() => {
 
-const userStore = useUserStore()
-const refreshing = ref(false)
-/** 申请弹层状态 */
-const showApply = ref(false)
-const submitting = ref(false)
-const selectedCourseId = ref<number | undefined>(undefined)
-/** 申请类型：补考 / 重修（提交时传给后端） */
-const selectedType = ref<string>('重修')
-const typeOptions = RETAKE_TYPE_OPTIONS
-const courseOptions = ref<Course[]>([])
-const coursesLoading = ref(false)
+    const map =
+      new Map<
+        string,
+        ExamRetake
+      >()
 
-const {
-  data: retakes,
-  loading,
-  error,
-  reload,
-} = useAsyncData<ExamRetake[]>(
-  () => (userStore.businessId ? listMyRetakes(userStore.businessId) : Promise.resolve([])),
-  [],
-)
+    for (
+      const row
+      of retakes.value
+    ) {
 
-/** 概览：重修 / 补考 / 待安排（examId 为空表示教务还没安排场次） */
-const summaryItems = computed(() => {
-  const rows = retakes.value
-  const pending = (row: ExamRetake) => row.examId === null || row.examId === undefined
-  return [
-    { label: '重修', value: rows.filter((row) => row.type === '重修').length },
-    { label: '补考', value: rows.filter((row) => row.type === '补考').length },
-    { label: '待安排', value: rows.filter(pending).length },
-  ]
-})
+      if (
+        row.status === 'WAIT'
+        ||
+        row.status === 'APPROVED'
+        ||
+        row.status === 'ARRANGED'
+      ) {
 
-/** 类型标签：补考 warning / 重修 primary */
-function typeTagOf(type: string): 'warning' | 'primary' {
-  return type === '补考' ? 'warning' : 'primary'
-}
+        map.set(
+          row.courseId,
+          row,
+        )
+      }
+    }
 
-/** 场次文案：后端已带 examName 时优先显示考试名称 */
-function examTextOf(row: ExamRetake): string {
-  if (row.examName) {
-    return `已安排：${row.examName}`
-  }
-  return row.examId === null || row.examId === undefined
-    ? '待教务安排'
-    : `已安排场次 #${row.examId}`
-}
+    return map
+  })
 
-/** 课程选项：首次打开弹层时拉取（一次 50 条足够选课用） */
-async function loadCourses() {
-  if (courseOptions.value.length > 0) {
+const summaryItems =
+  computed(
+    () => [
+      {
+        label:
+          '挂科课程',
+
+        value:
+          failedCourses.value
+            .length,
+      },
+
+      {
+        label:
+          '待审批',
+
+        value:
+          retakes.value.filter(
+            row =>
+              row.status
+              === 'WAIT',
+          ).length,
+      },
+
+      {
+        label:
+          '待考试',
+
+        value:
+          retakes.value.filter(
+            row =>
+              row.status
+              === 'ARRANGED',
+          ).length,
+      },
+    ],
+  )
+
+async function loadData() {
+
+  if (!studentId.value) {
     return
   }
-  coursesLoading.value = true
+
+  loading.value =
+    true
+
   try {
-    const page = await pageCourses({ page: 1, pageSize: 50 })
-    courseOptions.value = page.list
+
+    const [
+      failed,
+      records,
+    ] =
+      await Promise.all([
+        listFailedCourses(
+          studentId.value,
+        ),
+
+        listMyRetakes(
+          studentId.value,
+        ),
+      ])
+
+    failedCourses.value =
+      failed
+
+    retakes.value =
+      records
+
   } catch {
-    // 失败提示已由请求层统一 toast，这里保持空态
+    // request.ts统一提示
   } finally {
-    coursesLoading.value = false
+
+    loading.value =
+      false
   }
 }
 
-function openApply() {
-  if (!userStore.businessId) {
-    showToast('未解析到学号，请确认登录账号为学号')
-    return
-  }
-  selectedCourseId.value = undefined
-  selectedType.value = '重修'
-  showApply.value = true
-  void loadCourses()
+function statusText(
+  status: RetakeStatus,
+) {
+
+  const map:
+    Record<
+      RetakeStatus,
+      string
+    > = {
+      WAIT:
+        '待审批',
+
+      APPROVED:
+        '已批准，待安排',
+
+      REJECTED:
+        '已驳回',
+
+      ARRANGED:
+        '已安排考试',
+
+      COMPLETED:
+        '重修完成',
+    }
+
+  return map[status]
 }
 
-/** 提交申请：业务失败（如同课程重复申请）由请求层统一 toast，此处不重复弹错 */
-async function onSubmit() {
-  const studentId = userStore.businessId
-  const courseId = selectedCourseId.value
-  if (!studentId) {
-    showToast('未解析到学号，请确认登录账号为学号')
+function statusType(
+  status: RetakeStatus,
+):
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'default' {
+
+  if (
+    status === 'COMPLETED'
+  ) {
+    return 'success'
+  }
+
+  if (
+    status === 'REJECTED'
+  ) {
+    return 'danger'
+  }
+
+  if (
+    status === 'WAIT'
+    ||
+    status === 'APPROVED'
+  ) {
+    return 'warning'
+  }
+
+  return 'primary'
+}
+
+async function onApply(
+  course: FailedCourse,
+) {
+
+  if (!studentId.value) {
+    showToast(
+      '当前账号未绑定学生档案',
+    )
+
     return
   }
-  if (!courseId) {
-    showToast('请选择要申请的课程')
+
+  /**
+   * 页面上也阻止重复提交。
+   * 后端还有第二层校验。
+   */
+  const active =
+    activeRetakeMap.value.get(
+      course.courseId,
+    )
+
+  if (active) {
+
+    showToast(
+      statusText(
+        active.status,
+      ),
+    )
+
     return
   }
-  const courseName =
-    courseOptions.value.find((item) => item.id === courseId)?.name ?? `课程#${courseId}`
+
   try {
+
     await showConfirmDialog({
-      title: '确认申请',
-      message: `确定申请「${courseName}」的${selectedType.value}吗？提交后由教务安排考试场次。`,
+      title:
+        '申请重修',
+
+      message:
+        `「${course.courseName}」当前成绩 ${course.score} 分，确定申请重修吗？`,
     })
+
   } catch {
-    return // 用户取消
+    return
   }
-  submitting.value = true
+
+  submittingCourseId.value =
+    course.courseId
+
   try {
-    await applyRetake(studentId, courseId, selectedType.value)
-    showToast('申请已提交')
-    showApply.value = false
-    await reload()
+
+    await applyRetake(
+      studentId.value,
+      course.courseId,
+    )
+
+    showToast(
+      '重修申请已提交',
+    )
+
+    await loadData()
+
+    activeTab.value =
+      1
+
   } catch {
-    // 请求层已 toast，不重复提示
+    // 后端重复申请、
+    // 成绩已及格等异常统一提示
   } finally {
-    submitting.value = false
+
+    submittingCourseId.value =
+      ''
   }
 }
 
 async function onRefresh() {
-  refreshing.value = true
+
+  refreshing.value =
+    true
+
   try {
-    await reload()
+
+    await loadData()
+
   } finally {
-    refreshing.value = false
+
+    refreshing.value =
+      false
   }
 }
 
-onMounted(reload)
+onMounted(
+  loadData,
+)
 </script>
 
 <template>
   <div>
-    <!-- 顶部：标题 + 主操作 + 概览（对齐 admin 的卡片头结构） -->
     <div class="st-card">
-      <PageHeader title="补考重修">
-        <template #actions>
-          <van-button size="small" type="primary" @click="openApply">申请补考 / 重修</van-button>
-        </template>
-      </PageHeader>
-      <StatBar :items="summaryItems" />
+      <PageHeader
+        title="补考重修"
+      />
+
+      <StatBar
+        :items="summaryItems"
+      />
     </div>
 
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <!-- 未解析到学号时优先提示、不发请求，因此不进入加载态 -->
-      <PageState
-        :loading="loading && !refreshing && !!userStore.businessId"
-        :error="error"
-        :empty="!userStore.businessId || retakes.length === 0"
-        :empty-text="
-          userStore.businessId ? '暂无补考重修记录' : '未解析到学号，请确认登录账号为学号'
-        "
-        @retry="reload"
+    <van-tabs
+      v-model:active="
+        activeTab
+      "
+    >
+      <van-tab
+        title="挂科课程"
+      />
+
+      <van-tab
+        title="申请记录"
+      />
+    </van-tabs>
+
+    <van-pull-refresh
+      v-model="
+        refreshing
+      "
+      @refresh="
+        onRefresh
+      "
+    >
+      <div
+        v-if="loading"
+        class="st-card retake__loading"
       >
-        <div v-for="row in retakes" :key="row.id ?? `${row.type}-${row.courseId}`" class="st-card">
+        <van-loading
+          vertical
+        >
+          加载中
+        </van-loading>
+      </div>
+
+      <!-- 挂科课程 -->
+      <template
+        v-else-if="
+          activeTab === 0
+        "
+      >
+        <van-empty
+          v-if="
+            failedCourses.length
+            === 0
+          "
+          description="当前没有挂科课程"
+        />
+
+        <div
+          v-for="
+            course
+            in failedCourses
+          "
+          :key="
+            course.courseId
+          "
+          class="st-card"
+        >
           <div class="st-row">
-            <div class="retake__course">{{ row.courseName || `课程#${row.courseId}` }}</div>
-            <van-tag :type="typeTagOf(row.type)" plain>{{ row.type || '—' }}</van-tag>
+            <div>
+              <div
+                class="
+                  retake__course
+                "
+              >
+                {{
+                  course.courseName
+                }}
+              </div>
+
+              <div
+                class="
+                  st-muted
+                  retake__code
+                "
+              >
+                {{
+                  course.courseCode
+                  || '—'
+                }}
+
+                <span
+                  v-if="
+                    course.credit
+                    !== undefined
+                  "
+                >
+                  ·
+                  {{
+                    course.credit
+                  }}
+                  学分
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="
+                retake__score
+              "
+            >
+              {{
+                course.score
+              }}
+              分
+            </div>
           </div>
-          <div class="retake__meta st-muted">{{ examTextOf(row) }}</div>
+
+          <div
+            class="
+              retake__actions
+            "
+          >
+            <template
+              v-if="
+                activeRetakeMap
+                  .get(
+                    course.courseId,
+                  )
+              "
+            >
+              <van-tag
+                type="warning"
+              >
+                {{
+                  statusText(
+                    activeRetakeMap
+                      .get(
+                        course.courseId,
+                      )!
+                      .status
+                  )
+                }}
+              </van-tag>
+            </template>
+
+            <van-button
+              v-else
+              size="small"
+              type="primary"
+              :loading="
+                submittingCourseId
+                ===
+                course.courseId
+              "
+              @click="
+                onApply(course)
+              "
+            >
+              申请重修
+            </van-button>
+          </div>
         </div>
-      </PageState>
+      </template>
+
+      <!-- 申请记录 -->
+      <template
+        v-else
+      >
+        <van-empty
+          v-if="
+            retakes.length === 0
+          "
+          description="暂无重修申请记录"
+        />
+
+        <div
+          v-for="
+            row in retakes
+          "
+          :key="row.id"
+          class="st-card"
+        >
+          <div class="st-row">
+            <div>
+              <div
+                class="
+                  retake__course
+                "
+              >
+                {{
+                  row.courseName
+                  || '未知课程'
+                }}
+              </div>
+
+              <div
+                class="
+                  st-muted
+                  retake__code
+                "
+              >
+                {{
+                  row.courseCode
+                  || '—'
+                }}
+              </div>
+            </div>
+
+            <van-tag
+              :type="
+                statusType(
+                  row.status,
+                )
+              "
+            >
+              {{
+                statusText(
+                  row.status,
+                )
+              }}
+            </van-tag>
+          </div>
+
+          <div
+            v-if="
+              row.examName
+            "
+            class="
+              retake__exam
+              st-muted
+            "
+          >
+            考试：
+            {{
+              row.examName
+            }}
+
+            <span
+              v-if="
+                row.examDate
+              "
+            >
+              ·
+              {{
+                row.examDate
+              }}
+            </span>
+
+            <span
+              v-if="
+                row.startTime
+                && row.endTime
+              "
+            >
+              ·
+              {{
+                row.startTime
+              }}
+              -
+              {{
+                row.endTime
+              }}
+            </span>
+          </div>
+
+          <div
+            v-else
+            class="
+              retake__exam
+              st-muted
+            "
+          >
+            {{
+              row.status === 'WAIT'
+                ? '等待管理员审批'
+                : row.status === 'APPROVED'
+                  ? '审批已通过，等待安排考试'
+                  : row.status === 'REJECTED'
+                    ? '申请未通过'
+                    : '暂无考试信息'
+            }}
+          </div>
+        </div>
+      </template>
     </van-pull-refresh>
-
-    <!-- 申请弹层：van-form + 课程单选 -->
-    <van-popup v-model:show="showApply" position="bottom" round>
-      <van-form @submit="onSubmit">
-        <div class="retake__popup-title">申请补考 / 重修</div>
-
-        <div class="retake__field-label">申请类型</div>
-        <van-radio-group v-model="selectedType" direction="horizontal" class="retake__types">
-          <van-radio v-for="option in typeOptions" :key="option.value" :name="option.value">
-            {{ option.text }}
-          </van-radio>
-        </van-radio-group>
-
-        <div class="retake__field-label">选择课程</div>
-        <div v-if="coursesLoading" class="st-empty">
-          <van-loading vertical>课程加载中…</van-loading>
-        </div>
-        <van-empty v-else-if="courseOptions.length === 0" description="暂无可申请课程" />
-        <van-radio-group v-else v-model="selectedCourseId" class="retake__courses">
-          <van-radio
-            v-for="course in courseOptions"
-            :key="course.id"
-            :name="course.id"
-            class="retake__course-item"
-          >
-            {{ course.name }}
-            <span v-if="course.credit" class="st-muted">（{{ course.credit }} 学分）</span>
-          </van-radio>
-        </van-radio-group>
-
-        <div class="retake__popup-actions">
-          <van-button
-            round
-            block
-            type="primary"
-            native-type="submit"
-            :loading="submitting"
-            :disabled="courseOptions.length === 0"
-          >
-            提交申请
-          </van-button>
-        </div>
-      </van-form>
-    </van-popup>
-
-    <!-- 静态说明 -->
-    <div class="st-card retake__tip st-muted">
-      说明：申请提交后由教务统一安排补考 /
-      重修场次，安排完成后会显示考试名称；同一门课程存在"待安排"申请时不能重复提交，且课程成绩已及格时不允许申请。
-    </div>
   </div>
 </template>
 
 <style scoped>
+.retake__loading {
+  padding: 35px 0;
+}
+
 .retake__course {
   font-size: 15px;
   font-weight: 600;
 }
 
-.retake__meta {
-  margin-top: 6px;
+.retake__code {
+  margin-top: 4px;
+  font-size: 12px;
 }
 
-.retake__popup-title {
-  padding: 14px 16px 6px;
-  font-size: 16px;
-  font-weight: 600;
-  text-align: center;
+.retake__score {
+  color: var(--st-danger);
+  font-size: 20px;
+  font-weight: 700;
 }
 
-.retake__field-label {
-  padding: 8px 16px 4px;
-  font-size: 13px;
-  color: var(--st-text-light);
+.retake__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 
-.retake__types {
-  padding: 0 16px 6px;
-}
-
-.retake__courses {
-  max-height: 45vh;
-  padding: 4px 16px;
-  overflow-y: auto;
-}
-
-.retake__course-item {
-  padding: 6px 0;
-}
-
-.retake__popup-actions {
-  padding: 8px 16px 20px;
-}
-
-.retake__tip {
-  margin-top: 16px;
+.retake__exam {
+  margin-top: 10px;
   line-height: 1.6;
 }
 </style>

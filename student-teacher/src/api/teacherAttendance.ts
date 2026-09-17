@@ -1,68 +1,154 @@
-import { http, normalizeList } from '@/utils/request'
+import {
+  http,
+  normalizeList,
+} from '@/utils/request'
 
-/** 教师考勤记录（teacher_attendance；status 为中文：正常/迟到/缺勤） */
+import type {
+  DbId,
+} from '@/types/user'
+
 export interface TeacherAttendanceRecord {
-  id?: number
-  teacherId: number
-  /** YYYY-MM-DD */
+  id?: DbId
+
+  teacherId: DbId
+
   attendanceDate: string
+
   status: string
-  /** 签到时间 */
+
   checkTime?: string
-  /** 展示用扩展字段（后端实体没有，Mock 会带） */
-  teacherName?: string
 }
 
-/** 某天教师出勤统计（后端返回 Map） */
 export interface TeacherAttendanceStat {
-  /** 教师总数 */
-  total?: number
-  /** 已签到人数 */
-  checked?: number
-  /** 未签到人数 */
-  unchecked?: number
-  [key: string]: unknown
+  total: number
+
+  checked: number
+
+  absent: number
 }
 
 /**
- * 教师：签到（一天一次）
- * 后端 POST /api/teacher-attendance/check-in/{teacherId}
+ * 教师签到
+ *
+ * 真实后端：
+ *
+ * POST
+ * /api/teacher-attendances/{teacherId}/check-in
  */
-export function checkIn(teacherId: number) {
-  return http.post<null>(`/teacher-attendance/check-in/${teacherId}`)
+export function checkIn(
+  teacherId: DbId,
+) {
+  return http.post<null>(
+    `/teacher-attendances/${teacherId}/check-in`,
+  )
 }
 
 /**
- * 查询某天全部教师考勤记录
- * 后端 GET /api/teacher-attendance/list-by-date?date
+ * 查询某天全部教师签到
+ *
+ * 真实后端：
+ *
+ * GET
+ * /api/teacher-attendances?date=...
  */
-export async function listByDate(date: string): Promise<TeacherAttendanceRecord[]> {
-  const data = await http.get<unknown>('/teacher-attendance/list-by-date', { date })
-  return normalizeList<TeacherAttendanceRecord>(data)
+export async function listByDate(
+  date: string,
+): Promise<
+  TeacherAttendanceRecord[]
+> {
+  const data =
+    await http.get<unknown>(
+      '/teacher-attendances',
+      {
+        date,
+      },
+    )
+
+  return normalizeList<
+    TeacherAttendanceRecord
+  >(data)
 }
 
 /**
- * 某天教师出勤统计
- * 后端 GET /api/teacher-attendance/stat-by-date?date
+ * 查询某天教师签到统计
+ *
+ * 真实后端：
+ *
+ * GET
+ * /api/teacher-attendances/statistics?date=...
  */
-export function statByDate(date: string) {
-  return http.get<TeacherAttendanceStat>('/teacher-attendance/stat-by-date', { date })
+export function statByDate(
+  date: string,
+) {
+  return http.get<
+    TeacherAttendanceStat
+  >(
+    '/teacher-attendances/statistics',
+    {
+      date,
+    },
+  )
 }
 
 /**
- * 教师：查询本人在日期区间内的考勤记录（"我的签到"）
- * 后端 GET /api/teacher-attendance/list-by-teacher?teacherId&startDate&endDate
- * <p>注意：优先用这个接口，不要再逐日调 list-by-date 再筛本人（那是 7 次请求）。</p>
+ * 后端没有按照教师查询的接口。
+ *
+ * 所以：
+ *
+ * 按日期查询所有教师
+ * ↓
+ * 根据当前teacherId筛本人
  */
-export async function listMyAttendance(
-  teacherId: number,
-  startDate: string,
-  endDate: string,
-): Promise<TeacherAttendanceRecord[]> {
-  const data = await http.get<unknown>('/teacher-attendance/list-by-teacher', {
-    teacherId,
-    startDate,
-    endDate,
-  })
-  return normalizeList<TeacherAttendanceRecord>(data)
+export async function getMyAttendanceByDate(
+  teacherId: DbId,
+  date: string,
+): Promise<
+  TeacherAttendanceRecord | null
+> {
+  const records =
+    await listByDate(
+      date,
+    )
+
+  return (
+    records.find(
+      (item) =>
+        String(
+          item.teacherId,
+        )
+        ===
+        String(
+          teacherId,
+        ),
+    )
+    ?? null
+  )
+}
+
+/**
+ * 查询本人最近若干天。
+ */
+export async function listMyRecentAttendance(
+  teacherId: DbId,
+  dates: string[],
+): Promise<
+  TeacherAttendanceRecord[]
+> {
+  const results =
+    await Promise.all(
+      dates.map(
+        (date) =>
+          getMyAttendanceByDate(
+            teacherId,
+            date,
+          ),
+      ),
+    )
+
+  return results.filter(
+    (
+      item,
+    ): item is TeacherAttendanceRecord =>
+      item !== null,
+  )
 }

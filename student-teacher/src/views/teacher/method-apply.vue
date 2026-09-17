@@ -9,10 +9,16 @@
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
-import { listMyExamApplies, submitExamApply } from '@/api/examApply'
-import type { ExamApply } from '@/api/examApply'
-import { listMyCourses } from '@/api/base'
-import type { Course } from '@/api/base'
+import {
+  listExamCourses,
+  listMyExamApplies,
+  submitExamApply,
+} from '@/api/examApply'
+
+import type {
+  ExamApply,
+  ExamCourse,
+} from '@/api/examApply'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
 import PageHeader from '@/components/PageHeader.vue'
@@ -22,7 +28,7 @@ import { AUDIT_STATUS_TEXT, AUDIT_STATUS_TYPE, EXAM_METHOD_OPTIONS } from '@/con
 import { formatDateTime } from '@/utils/format'
 
 const userStore = useUserStore()
-/** 教师工号；0 = 业务身份未解析成功 */
+/** 教师ID，即后端 base_teacher.id */
 const teacherId = computed(() => userStore.businessId)
 
 const {
@@ -34,50 +40,86 @@ const {
   () => (teacherId.value ? listMyExamApplies(teacherId.value) : Promise.resolve([])),
   [],
 )
-/** 本人任教课程（缺口接口，现由 Mock 提供） */
-const { data: courses, reload: reloadCourses } = useAsyncData<Course[]>(
-  () => (teacherId.value ? listMyCourses(teacherId.value) : Promise.resolve([])),
-  [],
-)
+const {
+  data: courses,
+  reload: reloadCourses,
+} =
+  useAsyncData<
+    ExamCourse[]
+  >(
+    () =>
+      listExamCourses(),
+    [],
+  )
 
 /* ------------------------------ 新增申报 ------------------------------ */
 const showForm = ref(false)
 const showCoursePicker = ref(false)
 const submitting = ref(false)
-const form = reactive({ courseId: 0, applyType: EXAM_METHOD_OPTIONS[0] as string, reason: '' })
+const form = reactive({
+  courseId: '',
+  applyType: EXAM_METHOD_OPTIONS[0] as string,
+  reason: '',
+})
 
 const courseText = computed(
-  () => courses.value.find((item) => item.id === form.courseId)?.name ?? '',
+  () =>
+    courses.value.find(
+      (item) =>
+        String(item.id)
+        === form.courseId,
+    )?.name ?? '',
 )
 const courseColumns = computed(() =>
-  courses.value.map((item) => ({ text: item.name, value: item.id })),
+  courses.value.map(
+    (item) => ({
+      text: `${item.name}（${item.courseCode}）`,
+      value: String(item.id),
+    }),
+  ),
 )
 
 function openForm() {
-  form.courseId = courses.value[0]?.id ?? 0
+  if (courses.value.length === 0) {
+    showToast('系统暂无课程数据')
+    return
+  }
+
+  form.courseId = String(courses.value[0]?.id ?? '')
   form.applyType = EXAM_METHOD_OPTIONS[0]
   form.reason = ''
   showForm.value = true
 }
 
 function openCoursePicker() {
-  if (!courses.value.length) {
-    showToast('暂无任教课程')
+  if (courses.value.length === 0) {
+    showToast('系统暂无课程数据')
     return
   }
+
   showCoursePicker.value = true
 }
 
 function onCourseConfirm(payload: {
-  selectedOptions?: Array<{ value?: string | number } | undefined>
+  selectedOptions?: Array<{
+    value?: string | number
+  }>
 }) {
-  form.courseId = Number(payload.selectedOptions?.[0]?.value ?? 0)
+  const value =
+    payload.selectedOptions?.[0]?.value
+
+  form.courseId =
+    value === null
+    || value === undefined
+      ? ''
+      : String(value)
+
   showCoursePicker.value = false
 }
 
 async function onSubmit() {
   if (!teacherId.value) {
-    showToast('未解析到教师工号')
+    showToast('当前账号未绑定教师档案')
     return
   }
   if (!form.courseId) {
@@ -92,15 +134,18 @@ async function onSubmit() {
   try {
     await submitExamApply({
       courseId: form.courseId,
+
       teacherId: teacherId.value,
+
       applyType: form.applyType,
+
       reason: form.reason.trim(),
     })
     showToast('申报已提交')
     showForm.value = false
     await reload()
   } catch {
-    // 失败原因（如"该课程已有待审核的申报"）由请求层统一 toast
+    // request.ts统一处理
   } finally {
     submitting.value = false
   }
@@ -128,7 +173,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <van-empty v-if="!teacherId" description="未解析到教师工号">
+    <van-empty v-if="!teacherId" description="当前账号未绑定教师档案">
       <van-button round type="primary" size="small" @click="retryProfile">重新解析身份</van-button>
     </van-empty>
 
@@ -172,9 +217,16 @@ onMounted(() => {
         </div>
       </PageState>
 
-      <div class="st-card st-muted apply__note">
-        申报提交后由教研室 → 系主任 →
-        教务处逐级审核（审核在后台管理端完成），审核结果会同步到本页状态。
+      <div
+        class="
+          st-card
+          st-muted
+          apply__note
+        "
+      >
+        申报提交后进入待审核状态，
+        由后台管理员进行审核。
+        审核结果会同步显示在本页。
       </div>
     </template>
 
@@ -228,9 +280,6 @@ onMounted(() => {
           <van-button round block type="primary" native-type="submit" :loading="submitting">
             提交申报
           </van-button>
-        </div>
-        <div v-if="!courses.length" class="apply__tip st-muted">
-          暂无任教课程，请联系教务维护任课关系后再申报。
         </div>
       </van-form>
     </van-popup>

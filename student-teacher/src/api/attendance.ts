@@ -1,63 +1,313 @@
-import { http, normalizeList } from '@/utils/request'
+import {
+  http,
+  normalizeList,
+} from '@/utils/request'
 
-/** 学生考勤记录（student_attendance；status 为中文：正常/迟到/缺勤/请假） */
 export interface StudentAttendanceRecord {
-  id?: number
-  studentId: number
-  courseId: number
-  /** YYYY-MM-DD */
+  id?: string
+
+  studentId: string
+
+  courseId: string
+
   attendanceDate: string
+
+  /**
+   * 正常 / 迟到 / 缺勤 / 请假
+   */
   status: string
-  /** 展示用扩展字段（后端实体没有，Mock 会带） */
+
+  /**
+   * 前端展示字段
+   */
   courseName?: string
-  studentName?: string
-  studentNo?: string
+  courseCode?: string
 }
 
-/** 班级周考勤报表行（后端返回 List<Map>，字段以实际为准，故用松散类型） */
-export interface WeeklyReportRow {
-  studentId?: number
-  studentName?: string
+export interface AttendanceClass {
+  id: string
+  name: string
+  grade?: string
+}
+
+export interface AttendanceCourse {
+  id: string
+  courseCode: string
+  name: string
+}
+
+export interface AttendanceStudent {
+  id: string
+  studentNo: string
+  name: string
+  classId?: string
+}
+
+interface WeeklyReportRaw {
   studentNo?: string
+  name?: string
+  total?: number
   normal?: number
-  late?: number
   absent?: number
-  leave?: number
-  /** 出勤率，0~100 */
-  rate?: number
-  [key: string]: unknown
+}
+
+export interface WeeklyReportRow {
+  studentNo?: string
+  studentName?: string
+
+  total: number
+  normal: number
+
+  /**
+   * 后端的 absent 实际是：
+   * total - normal
+   *
+   * 所以前端叫 abnormal 更准确。
+   */
+  abnormal: number
+
+  rate?: number | null
 }
 
 /**
- * 学生：查询本人在日期区间内的考勤
- * 后端 GET /api/student-attendance/list-by-student?studentId&startDate&endDate
+ * 教师：所有班级
+ */
+export async function listAttendanceClasses():
+  Promise<AttendanceClass[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/classes',
+      {
+        pageNo: 1,
+        pageSize: 1000,
+      },
+    )
+
+  return normalizeList<AttendanceClass>(
+    data,
+  ).map(
+    item => ({
+      ...item,
+      id: String(item.id),
+    }),
+  )
+}
+
+/**
+ * 教师：所有课程
+ */
+export async function listAttendanceCourses():
+  Promise<AttendanceCourse[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/courses',
+      {
+        pageNo: 1,
+        pageSize: 1000,
+      },
+    )
+
+  return normalizeList<AttendanceCourse>(
+    data,
+  ).map(
+    item => ({
+      ...item,
+      id: String(item.id),
+    }),
+  )
+}
+
+/**
+ * 教师：某班级学生
+ */
+export async function listAttendanceStudents(
+  classId: string,
+): Promise<AttendanceStudent[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/students',
+      {
+        classId,
+      },
+    )
+
+  return normalizeList<AttendanceStudent>(
+    data,
+  ).map(
+    item => ({
+      ...item,
+
+      id:
+        String(item.id),
+
+      classId:
+        item.classId === undefined
+        || item.classId === null
+          ? undefined
+          : String(item.classId),
+    }),
+  )
+}
+
+/**
+ * 教师：提交学生考勤。
+ *
+ * 学生端绝对不调用这个函数。
+ */
+export function recordAttendance(
+  records:
+    StudentAttendanceRecord[],
+) {
+
+  return http.post<null>(
+    '/student-attendances',
+    records,
+  )
+}
+
+/**
+ * 学生：只查看自己的考勤。
  */
 export async function listMyAttendance(
-  studentId: number,
+  studentId: string,
   startDate: string,
   endDate: string,
 ): Promise<StudentAttendanceRecord[]> {
-  const data = await http.get<unknown>('/student-attendance/list-by-student', {
-    studentId,
-    startDate,
-    endDate,
-  })
-  return normalizeList<StudentAttendanceRecord>(data)
+
+  const [
+    attendanceData,
+    courseData,
+  ] =
+    await Promise.all([
+      http.get<unknown>(
+        `/student-attendances/students/${studentId}`,
+        {
+          startDate,
+          endDate,
+        },
+      ),
+
+      http.get<unknown>(
+        '/courses',
+        {
+          pageNo: 1,
+          pageSize: 1000,
+        },
+      ),
+    ])
+
+  const records =
+    normalizeList<StudentAttendanceRecord>(
+      attendanceData,
+    )
+
+  const courses =
+    normalizeList<AttendanceCourse>(
+      courseData,
+    )
+
+  const courseMap =
+    new Map(
+      courses.map(
+        course => [
+          String(course.id),
+          course,
+        ],
+      ),
+    )
+
+  return records.map(
+    record => {
+
+      const course =
+        courseMap.get(
+          String(record.courseId),
+        )
+
+      return {
+        ...record,
+
+        id:
+          record.id === null
+          || record.id === undefined
+            ? undefined
+            : String(record.id),
+
+        studentId:
+          String(record.studentId),
+
+        courseId:
+          String(record.courseId),
+
+        courseName:
+          course?.name,
+
+        courseCode:
+          course?.courseCode,
+      }
+    },
+  )
 }
 
 /**
- * 教师：批量录入学生考勤（同学生同课程同日期已有记录时覆盖更新）
- * 后端 POST /api/student-attendance/record，body 为记录数组
+ * 教师：班级周报。
  */
-export function recordAttendance(records: StudentAttendanceRecord[]) {
-  return http.post<null>('/student-attendance/record', records)
-}
+export async function getWeeklyReport(
+  classId: string,
+  date: string,
+): Promise<WeeklyReportRow[]> {
 
-/**
- * 教师：班级学生周考勤报表（date 传该周任意一天）
- * 后端 GET /api/student-attendance/weekly-report?classId&date
- */
-export async function getWeeklyReport(classId: number, date: string): Promise<WeeklyReportRow[]> {
-  const data = await http.get<unknown>('/student-attendance/weekly-report', { classId, date })
-  return normalizeList<WeeklyReportRow>(data)
+  const data =
+    await http.get<unknown>(
+      '/student-attendances/weekly-report',
+      {
+        classId,
+        date,
+      },
+    )
+
+  const rows =
+    normalizeList<WeeklyReportRaw>(
+      data,
+    )
+
+  return rows.map(
+    row => {
+
+      const total =
+        Number(row.total ?? 0)
+
+      const normal =
+        Number(row.normal ?? 0)
+
+      const abnormal =
+        Number(row.absent ?? 0)
+
+      return {
+        studentNo:
+          row.studentNo,
+
+        studentName:
+          row.name,
+
+        total,
+
+        normal,
+
+        abnormal,
+
+        rate:
+          total > 0
+            ? Math.round(
+                normal
+                / total
+                * 100,
+              )
+            : null,
+      }
+    },
+  )
 }

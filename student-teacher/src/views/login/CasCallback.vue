@@ -8,11 +8,14 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const message = ref('正在完成统一身份认证...')
+const message = ref(
+  '正在完成统一身份认证...',
+)
 
 function goUnifiedLogin() {
-  window.location.href =
-    'http://localhost:5173/login'
+  window.location.replace(
+    'http://localhost:5173/login',
+  )
 }
 
 onMounted(async () => {
@@ -20,13 +23,14 @@ onMounted(async () => {
   const error = route.query.error
 
   /**
-   * CAS返回错误
+   * CAS 返回错误
    */
   if (
     typeof error === 'string'
     && error
   ) {
-    message.value = '统一身份认证失败'
+    message.value =
+      '统一身份认证失败'
 
     showToast(error)
 
@@ -38,13 +42,14 @@ onMounted(async () => {
   }
 
   /**
-   * 没拿到JWT
+   * 没有拿到 JWT
    */
   if (
     typeof token !== 'string'
     || !token
   ) {
-    message.value = '未获取到登录凭证'
+    message.value =
+      '未获取到登录凭证'
 
     showToast(
       '统一身份认证失败，请重新登录',
@@ -59,20 +64,21 @@ onMounted(async () => {
 
   try {
     /**
-     * 保存JWT
-     * ↓
+     * 保存 JWT
+     *
+     * 然后调用：
      * GET /api/auth/userinfo
-     * ↓
-     * 识别 STUDENT / TEACHER
-     * ↓
-     * 解析学生/教师业务身份
+     *
+     * 获取 STUDENT / TEACHER
+     * 并解析对应学生/教师资料。
      */
     const userInfo =
       await userStore.completeCasLogin(
         token,
       )
 
-    message.value = '登录成功，正在进入系统...'
+    message.value =
+      '登录成功，正在进入系统...'
 
     if (userInfo.role === 'student') {
       showToast('学生登录成功')
@@ -80,8 +86,16 @@ onMounted(async () => {
       showToast('教师登录成功')
     }
 
+    /**
+     * 进入师生端首页
+     */
     await router.replace('/home')
-  } catch {
+  } catch (error) {
+    console.error(
+      '师生端CAS登录失败：',
+      error,
+    )
+
     message.value = '登录失败'
 
     showToast(

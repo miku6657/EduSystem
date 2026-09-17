@@ -1,55 +1,99 @@
-/** 师生端角色：只有学生与教师（管理员在 admin 工程） */
-export type Role = 'student' | 'teacher'
+/**
+ * 师生端角色
+ *
+ * 管理员只进入 admin，
+ * 所以这里不存在 admin。
+ */
+export type Role =
+  | 'student'
+  | 'teacher'
 
-export interface LoginParams {
-  username: string
-  password: string
-}
+/**
+ * 数据库主键统一使用 string。
+ *
+ * 原因：
+ * 后端使用 BIGINT / Snowflake ID，
+ * JavaScript number 无法安全保存。
+ */
+export type DbId = string
 
-/** 后端 /api/auth/login 的原始返回：{ token, user: { id, username, role } }；Mock 可能多带 roles/name */
-export interface LoginResultRaw {
-  token: string
-  user?: {
-    id?: number
-    username?: string
-    role?: string
-  }
-  roles?: string[]
-  name?: string
-}
-
-/** 归一化后的登录结果 */
-export interface LoginResult {
-  token: string
-  role: Role
-  name: string
-  /** 系统用户ID（sys_user.id），非学生/教师业务ID */
-  userId: number
-  username: string
-}
-
-/** 学生业务身份（base_student） */
+/**
+ * 学生业务档案
+ *
+ * 数据来源：
+ * base_student
+ */
 export interface StudentProfile {
-  id: number
-  studentNo: string
+  /**
+   * base_student.id
+   */
+  id: DbId
+
+  /**
+   * 学号只是学生档案字段，
+   * 不再参与登录和身份解析。
+   */
+  studentNo?: string
+
   name: string
+
   gender?: string
-  classId?: number
+
+  /**
+   * base_class.id
+   */
+  classId?: DbId
+
   className?: string
+
   majorName?: string
+
   phone?: string
+
   status?: string
 }
 
-/** 教师业务身份（base_teacher） */
+/**
+ * 教师业务档案
+ *
+ * 数据来源：
+ * base_teacher
+ */
 export interface TeacherProfile {
-  id: number
+  /**
+   * base_teacher.id
+   */
+  id: DbId
+
+  /**
+   * 工号只是教师档案字段，
+   * 不再参与登录和身份解析。
+   */
   teacherNo?: string
+
   name: string
+
   gender?: string
-  departmentId?: number
+
+  /**
+   * base_department.id
+   */
+  departmentId?: DbId
+
   departmentName?: string
-  title?: string
+
+  /**
+   * base_teaching_group.id
+   */
+  teachingGroupId?: DbId
+
+  type?: string
+
   teacherType?: string
+
+  title?: string
+
+  phone?: string
+
   status?: string
 }

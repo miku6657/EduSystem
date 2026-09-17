@@ -38,12 +38,7 @@ const teacherRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/teacher/roster.vue'),
     meta: { title: '班级花名册', icon: 'contact', roles: ['teacher'] },
   },
-  {
-    path: 'teacher/invigilation',
-    name: 'TeacherInvigilation',
-    component: () => import('@/views/teacher/invigilation.vue'),
-    meta: { title: '我的监考', icon: 'eye-o', roles: ['teacher'] },
-  },
+  
 ]
 
 export default teacherRoutes

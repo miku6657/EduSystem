@@ -1,4 +1,5 @@
 import axios from 'axios'
+import JSONbig from 'json-bigint'
 import type {
   AxiosError,
   AxiosRequestConfig,
@@ -28,9 +29,30 @@ export class ApiError extends Error {
  */
 const SUCCESS_CODES = [0, 200]
 
+const jsonParser =
+  JSONbig({
+    storeAsString: true,
+  })
+
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL
+    || '/api',
+
   timeout: 15000,
+
+  /**
+   * 后端大量使用BIGINT / Snowflake ID。
+   *
+   * 统一把超大整数解析成string，
+   * 防止JavaScript精度丢失。
+   */
+  transformResponse: [
+    (data) =>
+      typeof data === 'string'
+        ? jsonParser.parse(data)
+        : data,
+  ],
 })
 
 // 请求拦截：自动携带 Token

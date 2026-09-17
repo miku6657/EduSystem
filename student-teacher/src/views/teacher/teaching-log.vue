@@ -8,10 +8,18 @@
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
-import { addTeachingLog, listMyTeachingLogs } from '@/api/teachingLog'
-import type { TeachingLog } from '@/api/teachingLog'
-import { listMyClasses, listMyCourses } from '@/api/base'
-import type { ClassInfo, Course } from '@/api/base'
+import {
+  addTeachingLog,
+  listMyTeachingLogs,
+  listTeachingClasses,
+  listTeachingCourses,
+} from '@/api/teachingLog'
+
+import type {
+  TeachingClass,
+  TeachingCourse,
+  TeachingLog,
+} from '@/api/teachingLog'
 import { useUserStore } from '@/stores/user'
 import { useAsyncData } from '@/composables/useAsyncData'
 import PageHeader from '@/components/PageHeader.vue'
@@ -40,15 +48,28 @@ const {
     teacherId.value ? listMyTeachingLogs(teacherId.value, weekDate.value) : Promise.resolve([]),
   [],
 )
-/** 本人任教课程 / 班级（后端缺口接口，当前由 Mock 提供） */
-const { data: courses, reload: reloadCourses } = useAsyncData<Course[]>(
-  () => (teacherId.value ? listMyCourses(teacherId.value) : Promise.resolve([])),
-  [],
-)
-const { data: classes, reload: reloadClasses } = useAsyncData<ClassInfo[]>(
-  () => (teacherId.value ? listMyClasses(teacherId.value) : Promise.resolve([])),
-  [],
-)
+const {
+  data: courses,
+  reload: reloadCourses,
+} =
+  useAsyncData<
+    TeachingCourse[]
+  >(
+    () =>
+      listTeachingCourses(),
+    [],
+  )
+const {
+  data: classes,
+  reload: reloadClasses,
+} =
+  useAsyncData<
+    TeachingClass[]
+  >(
+    () =>
+      listTeachingClasses(),
+    [],
+  )
 
 /** 统计条数据（对齐公共组件 StatBar）：本页日志数与覆盖课程数 */
 const summaryItems = computed(() => [
@@ -62,18 +83,68 @@ const showCourse = ref(false)
 const showClass = ref(false)
 const showDate = ref(false)
 const submitting = ref(false)
-const form = reactive({ courseId: 0, classId: 0, teachingDate: today, content: '', homework: '' })
+const form =
+  reactive({
+    courseId: '',
 
-const courseText = computed(
-  () => courses.value.find((item) => item.id === form.courseId)?.name ?? '',
-)
-const classText = computed(() => classes.value.find((item) => item.id === form.classId)?.name ?? '')
-const courseColumns = computed(() =>
-  courses.value.map((item) => ({ text: item.name, value: item.id })),
-)
-const classColumns = computed(() =>
-  classes.value.map((item) => ({ text: item.name, value: item.id })),
-)
+    classId: '',
+
+    teachingDate:
+      today,
+
+    content: '',
+
+    homework: '',
+  })
+
+const courseText =
+  computed(
+    () =>
+      courses.value.find(
+        (item) =>
+          String(item.id)
+          ===
+          form.courseId,
+      )?.name
+      ?? '',
+  )
+const classText =
+  computed(
+    () =>
+      classes.value.find(
+        (item) =>
+          String(item.id)
+          ===
+          form.classId,
+      )?.name
+      ?? '',
+  )
+const courseColumns =
+  computed(() =>
+    courses.value.map(
+      (item) => ({
+        text:
+          `${item.name}（${item.courseCode}）`,
+
+        value:
+          String(item.id),
+      }),
+    ),
+  )
+const classColumns =
+  computed(() =>
+    classes.value.map(
+      (item) => ({
+        text:
+          item.grade
+            ? `${item.name}（${item.grade}级）`
+            : item.name,
+
+        value:
+          String(item.id),
+      }),
+    ),
+  )
 /** van-date-picker 的值形如 ['2026','09','11'] */
 const dateValues = computed(() => form.teachingDate.split('-'))
 /** 长文折叠：记录已展开的日志 id */
@@ -83,13 +154,25 @@ interface PickerPayload {
   selectedOptions?: Array<{ value?: string | number } | undefined>
 }
 
-function pickId(payload: PickerPayload): number {
-  return Number(payload.selectedOptions?.[0]?.value ?? 0)
+function pickId(
+  payload: PickerPayload,
+): string {
+
+  const value =
+    payload
+      .selectedOptions
+      ?.[0]
+      ?.value
+
+  return value === null
+  || value === undefined
+    ? ''
+    : String(value)
 }
 
 function openCoursePicker() {
   if (!courses.value.length) {
-    showToast('暂无任教课程')
+    showToast('系统暂无课程数据')
     return
   }
   showCourse.value = true
@@ -97,7 +180,7 @@ function openCoursePicker() {
 
 function openClassPicker() {
   if (!classes.value.length) {
-    showToast('暂无任教班级')
+    showToast('系统暂无班级数据')
     return
   }
   showClass.value = true
@@ -133,8 +216,18 @@ function goThisWeek() {
 
 /** 打开表单：默认第一门课程 / 第一个班级，日期默认今天 */
 function openForm() {
-  form.courseId = courses.value[0]?.id ?? 0
-  form.classId = classes.value[0]?.id ?? 0
+  if (courses.value.length === 0) {
+    showToast('系统暂无课程数据')
+    return
+  }
+
+  if (classes.value.length === 0) {
+    showToast('系统暂无班级数据')
+    return
+  }
+
+  form.courseId = String(courses.value[0]?.id ?? '')
+  form.classId = String(classes.value[0]?.id ?? '')
   form.teachingDate = today
   form.content = ''
   form.homework = ''
@@ -149,30 +242,40 @@ function toggleContent(id?: number) {
 
 async function onSubmit() {
   if (!teacherId.value) {
-    showToast('未解析到教师工号')
+    showToast('当前账号未绑定教师档案')
     return
   }
-  if (!form.courseId || !form.classId) {
-    showToast('请选择课程与班级')
+  if (!form.courseId) {
+    showToast('请选择课程')
+    return
+  }
+  if (!form.classId) {
+    showToast('请选择班级')
+    return
+  }
+  if (!form.content.trim()) {
+    showToast('请填写授课内容')
     return
   }
   submitting.value = true
   try {
     await addTeachingLog({
-      teacherId: teacherId.value,
+      teacherId: String(teacherId.value),
       courseId: form.courseId,
       classId: form.classId,
       teachingDate: form.teachingDate,
       content: form.content.trim(),
-      homework: form.homework.trim(),
+      homework: form.homework.trim() || undefined,
     })
     showToast('教学日志已提交')
     showForm.value = false
-    // 跳到刚提交的日志所在周，保证新增结果可见
+    /**
+     * 切换到刚提交日志所在周。
+     */
     weekDate.value = form.teachingDate
     await reload()
   } catch {
-    // 请求层已统一 toast 失败原因（如"授课日期不能晚于今天"）
+    // request.ts统一提示
   } finally {
     submitting.value = false
   }
@@ -318,7 +421,7 @@ onMounted(() => {
           >
         </div>
         <div v-if="!courses.length || !classes.length" class="log__tip st-muted">
-          暂无任教课程或班级，请联系教务维护任课关系后再提交。
+          系统暂无课程或班级基础数据。
         </div>
       </van-form>
     </van-popup>

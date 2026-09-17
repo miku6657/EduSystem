@@ -1,43 +1,227 @@
-import { http, normalizeList } from '@/utils/request'
+import {
+  http,
+  normalizeList,
+} from '@/utils/request'
 
-/** 考核方式申报（exam_apply.status：WAIT/PASS/FAIL；apply_type：闭卷/开卷/机考…） */
 export interface ExamApply {
-  id?: number
-  courseId: number
-  teacherId: number
-  /** 考核方式，如 闭卷 / 开卷 / 机考 */
+  id?: string
+
+  courseId: string
+
+  teacherId: string
+
   applyType: string
-  /** 申请理由 */
+
   reason?: string
-  status?: string
-  /** 展示用扩展字段（后端实体没有，Mock 会带） */
-  courseName?: string
-  teacherName?: string
+
+  status?: 'WAIT' | 'PASS' | 'FAIL'
+
   createTime?: string
+
+  updateTime?: string
+
+  /**
+   * 前端展示字段
+   */
+  courseName?: string
+
+  courseCode?: string
+}
+
+export interface ExamCourse {
+  id: string
+
+  courseCode: string
+
+  name: string
+
+  credit?: number
+
+  type?: string
+
+  teacherId?: string
+
+  termId?: string
 }
 
 /**
- * 教师：提交考核方式申报
- * 后端 POST /api/exam-apply/apply，body 为 ExamApply
+ * 查询所有课程。
+ *
+ * 不再区分“我的课程”。
+ *
+ * 真实后端：
+ * GET /api/courses
  */
-export function submitExamApply(payload: ExamApply) {
-  return http.post<null>('/exam-apply/apply', payload)
+export async function listExamCourses():
+  Promise<ExamCourse[]> {
+
+  const data =
+    await http.get<unknown>(
+      '/courses',
+      {
+        pageNo: 1,
+        pageSize: 1000,
+      },
+    )
+
+  return normalizeList<
+    ExamCourse
+  >(data).map(
+    (item) => ({
+      ...item,
+
+      id:
+        String(
+          item.id,
+        ),
+
+      teacherId:
+        item.teacherId === null
+        || item.teacherId === undefined
+          ? undefined
+          : String(
+              item.teacherId,
+            ),
+
+      termId:
+        item.termId === null
+        || item.termId === undefined
+          ? undefined
+          : String(
+              item.termId,
+            ),
+    }),
+  )
 }
 
 /**
- * 按 ID 查询申报详情
- * 后端 GET /api/exam-apply/{id}
+ * 提交考核方式申报。
+ *
+ * 真实后端：
+ * POST /api/exam-applies
  */
-export function getExamApply(id: number) {
-  return http.get<ExamApply>(`/exam-apply/${id}`)
+export function submitExamApply(
+  payload: {
+    courseId: string
+
+    teacherId: string
+
+    applyType: string
+
+    reason: string
+  },
+) {
+
+  return http.post<null>(
+    '/exam-applies',
+    payload,
+  )
 }
 
 /**
- * 教师：我的申报记录
- * ⚠️ 缺口：后端只有 /export-list（导出总表）与 /{id}，没有"按教师查我的申报"，
- * 当前由 Mock 提供 GET /api/exam-apply/my/list?teacherId，待后端补。
+ * 查询当前教师自己的申报记录。
+ *
+ * 后端没有 /my，
+ * 所以使用已有：
+ *
+ * GET /api/exam-applies/export
+ *
+ * 再根据teacherId过滤。
  */
-export async function listMyExamApplies(teacherId: number): Promise<ExamApply[]> {
-  const data = await http.get<unknown>('/exam-apply/my/list', { teacherId })
-  return normalizeList<ExamApply>(data)
+export async function listMyExamApplies(
+  teacherId: string,
+): Promise<ExamApply[]> {
+
+  const [
+    applyData,
+    courses,
+  ] =
+    await Promise.all([
+      http.get<unknown>(
+        '/exam-applies/export',
+      ),
+
+      listExamCourses(),
+    ])
+
+  const applies =
+    normalizeList<
+      ExamApply
+    >(applyData)
+
+  const courseMap =
+    new Map(
+      courses.map(
+        (course) => [
+          String(course.id),
+          course,
+        ],
+      ),
+    )
+
+  return applies
+    .filter(
+      (item) =>
+        String(
+          item.teacherId,
+        )
+        ===
+        String(
+          teacherId,
+        ),
+    )
+    .map(
+      (item) => {
+
+        const course =
+          courseMap.get(
+            String(
+              item.courseId,
+            ),
+          )
+
+        return {
+          ...item,
+
+          id:
+            item.id === null
+            || item.id === undefined
+              ? undefined
+              : String(
+                  item.id,
+                ),
+
+          courseId:
+            String(
+              item.courseId,
+            ),
+
+          teacherId:
+            String(
+              item.teacherId,
+            ),
+
+          courseName:
+            course?.name,
+
+          courseCode:
+            course?.courseCode,
+        }
+      },
+    )
+}
+
+/**
+ * 申报详情。
+ *
+ * 真实后端：
+ * GET /api/exam-applies/{id}
+ */
+export function getExamApply(
+  id: string,
+) {
+
+  return http.get<ExamApply>(
+    `/exam-applies/${id}`,
+  )
 }
